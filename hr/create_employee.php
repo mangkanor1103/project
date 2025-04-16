@@ -55,39 +55,39 @@
                     <input type="file" id="image" name="image" accept="image/*" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                 </div>
             </fieldset>
-            <!-- Job Details -->
-<fieldset>
-    <legend class="text-lg font-bold">Job Details</legend>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-            <label for="job_position" class="block text-sm font-medium">Job Position</label>
-            <input type="text" id="job_position" name="job_position" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-        </div>
-        <div>
-            <label for="department" class="block text-sm font-medium">Department</label>
-            <input type="text" id="department" name="department" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-        </div>
-        <div>
-            <label for="employee_type" class="block text-sm font-medium">Employee Type</label>
-            <select id="employee_type" name="employee_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-                <option value="">Select</option>
-                <option value="Regular">Regular</option>
-                <option value="Probationary">Probationary</option>
-                <option value="Contractual">Contractual</option>
-            </select>
-        </div>
-        <div>
-            <label for="date_hired" class="block text-sm font-medium">Date Hired</label>
-            <input type="date" id="date_hired" name="date_hired" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-        </div>
-        <div>
-            <label for="work_schedule" class="block text-sm font-medium">Work Schedule</label>
-            <input type="text" id="work_schedule" name="work_schedule" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-        </div>
-    </div>
-</fieldset>
 
-            
+            <!-- Job Details -->
+            <fieldset>
+                <legend class="text-lg font-bold">Job Details</legend>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="job_position" class="block text-sm font-medium">Job Position</label>
+                        <input type="text" id="job_position" name="job_position" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="department" class="block text-sm font-medium">Department</label>
+                        <input type="text" id="department" name="department" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="employee_type" class="block text-sm font-medium">Employee Type</label>
+                        <select id="employee_type" name="employee_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                            <option value="">Select</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Probationary">Probationary</option>
+                            <option value="Contractual">Contractual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="date_hired" class="block text-sm font-medium">Date Hired</label>
+                        <input type="date" id="date_hired" name="date_hired" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="work_schedule" class="block text-sm font-medium">Work Schedule</label>
+                        <input type="text" id="work_schedule" name="work_schedule" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                    </div>
+                </div>
+            </fieldset>
+
             <!-- Government Details -->
             <fieldset>
                 <legend class="text-lg font-bold">Government Details</legend>
@@ -122,7 +122,7 @@
                     </select>
                 </div>
             </fieldset>
-            
+
             <!-- Salary & Payment Details -->
             <fieldset>
                 <legend class="text-lg font-bold">Salary & Payment Details</legend>
@@ -148,7 +148,7 @@
                     </div>
                 </div>
             </fieldset>
-            
+
             <!-- Emergency Contact -->
             <fieldset>
                 <legend class="text-lg font-bold">Emergency Contact</legend>
