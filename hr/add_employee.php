@@ -1,5 +1,5 @@
 <?php
-include '../config.php'; // or whatever connects you to your DB
+include '../config.php'; // Database configuration
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize inputs
@@ -26,6 +26,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $emergency_relationship = $_POST['emergency_relationship'];
     $emergency_contact = $_POST['emergency_contact'];
 
+    // Set a fixed temporary password
+    $password = "12345678"; // Temporary password
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT); // Hash the password for storage
+
     // Image upload (optional)
     $image_name = '';
     if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
@@ -40,29 +44,56 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 job_position, department, employee_type, date_hired, work_schedule,
                 sss_number, philhealth_number, pagibig_number, tin, status,
                 salary_type, basic_salary, overtime_bonus,
-                emergency_name, emergency_relationship, emergency_contact
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                emergency_name, emergency_relationship, emergency_contact,
+                password
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if ($stmt) {
         $stmt->bind_param(
-            "ssssssssssssssssssdisss",
+            "ssssssssssssssssssdissss",
             $full_name, $dob, $gender, $contact_number, $email, $home_address, $image_name,
             $job_position, $department, $employee_type, $date_hired, $work_schedule,
             $sss_number, $philhealth_number, $pagibig_number, $tin, $status,
             $salary_type, $basic_salary, $overtime_bonus,
-            $emergency_name, $emergency_relationship, $emergency_contact
+            $emergency_name, $emergency_relationship, $emergency_contact,
+            $hashed_password
         );
 
         if ($stmt->execute()) {
-            // Redirect on success
-            header("Location: hr_dashboard.php");
-            exit(); // Important: stop script execution after redirect
+            // Success message with SweetAlert2
+            echo "
+            <!DOCTYPE html>
+            <html lang='en'>
+            <head>
+                <meta charset='UTF-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                <title>Employee Created</title>
+                <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+            </head>
+            <body>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Employee Created!',
+                        html: '<p>The temporary password is <b>12345678</b>.</p>',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        customClass: {
+                            popup: 'swal2-popup swal2-rounded swal2-shadow'
+                        }
+                    }).then(() => {
+                        window.location.href = 'hr_dashboard.php';
+                    });
+                </script>
+            </body>
+            </html>";
+            exit();
         } else {
-            $error_message = "Database Error: " . $stmt->error;
+            echo "Database Error: " . $stmt->error;
         }
     } else {
-        $error_message = "Prepare failed: " . $conn->error;
+        echo "Prepare failed: " . $conn->error;
     }
 }
 ?>

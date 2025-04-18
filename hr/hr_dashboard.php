@@ -79,6 +79,8 @@ if ($result && $result->num_rows > 0) {
                     <tr><td class='font-semibold py-1'>Gender:</td><td>" . htmlspecialchars($row['gender']) . "</td></tr>
                     <tr><td class='font-semibold py-1'>Contact:</td><td>" . htmlspecialchars($row['contact_number']) . "</td></tr>
                     <tr><td class='font-semibold py-1'>Email:</td><td>" . htmlspecialchars($row['email']) . "</td></tr>
+                                        <tr><td class='font-semibold py-1'>Password:</td><td>" . htmlspecialchars($row['password']) . "</td></tr>
+
                     <tr><td class='font-semibold py-1'>Address:</td><td>" . htmlspecialchars($row['home_address']) . "</td></tr>
                     <tr><td class='font-semibold py-1'>Position:</td><td>" . htmlspecialchars($row['job_position']) . "</td></tr>
                     <tr><td class='font-semibold py-1'>Department:</td><td>" . htmlspecialchars($row['department']) . "</td></tr>
