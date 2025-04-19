@@ -2,9 +2,10 @@
 session_start();
 include '../config.php';
 
-// Check if the HR Admin is logged in
-if (!isset($_SESSION['hr_loggedin']) || $_SESSION['hr_loggedin'] !== true) {
-    header("Location: login.php");
+// Check if the user is logged in and has the HR admin role
+if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
+    // Redirect to login page if not logged in
+    header("Location: ../login.php");
     exit();
 }
 
@@ -77,21 +78,28 @@ $result = $conn->query($sql);
                 <tbody>
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
-                            <td class="px-6 py-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($row['full_name']); ?></td>
-                            <td class="px-6 py-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($row['leave_type']); ?></td>
-                            <td class="px-6 py-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($row['start_date']); ?></td>
-                            <td class="px-6 py-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($row['end_date']); ?></td>
-                            <td class="px-6 py-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($row['reason']); ?></td>
+                            <td class="px-6 py-4 border-b text-sm text-gray-700">
+                                <?php echo htmlspecialchars($row['full_name']); ?></td>
+                            <td class="px-6 py-4 border-b text-sm text-gray-700">
+                                <?php echo htmlspecialchars($row['leave_type']); ?></td>
+                            <td class="px-6 py-4 border-b text-sm text-gray-700">
+                                <?php echo htmlspecialchars($row['start_date']); ?></td>
+                            <td class="px-6 py-4 border-b text-sm text-gray-700">
+                                <?php echo htmlspecialchars($row['end_date']); ?></td>
+                            <td class="px-6 py-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($row['reason']); ?>
+                            </td>
                             <td class="px-6 py-4 border-b text-sm text-gray-700">
                                 <form action="approval.php" method="POST" class="inline">
                                     <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
-                                    <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition transform hover:scale-105">
+                                    <button type="submit" name="action" value="approve"
+                                        class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition transform hover:scale-105">
                                         Approve
                                     </button>
                                 </form>
                                 <form action="approval.php" method="POST" class="inline">
                                     <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
-                                    <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition transform hover:scale-105">
+                                    <button type="submit" name="action" value="reject"
+                                        class="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition transform hover:scale-105">
                                         Reject
                                     </button>
                                 </form>
