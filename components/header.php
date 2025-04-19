@@ -6,6 +6,8 @@
     <title>PHP Web App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
 </head>
 <body class="bg-gray-100">
     <header class="bg-blue-600 text-white py-4">
