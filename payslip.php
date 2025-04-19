@@ -64,6 +64,18 @@ $overtime_rate = $hourly_rate * 1.25; // Overtime rate
 $regular_pay = $hourly_rate * $total_hours_worked;
 $overtime_pay = $overtime_rate * $total_overtime_hours;
 
+// Add these calculations after the overtime_pay calculation
+$night_diff_pay = $hourly_rate * 1.1 * $total_night_hours;
+$night_ot_pay = $overtime_rate * 1.1 * $total_night_overtime_hours;
+$holiday_pay = $hourly_rate * 2 * $total_holiday_hours;
+$restday_pay = $hourly_rate * 1.3 * $total_restday_hours;
+$special_holiday_pay = $hourly_rate * 1.3 * $total_special_holiday_hours;
+$legal_holiday_pay = $hourly_rate * 2 * $total_legal_holiday_hours;
+
+// Update the gross salary calculation to include all components
+$gross_salary = $regular_pay + $overtime_pay + $night_diff_pay + $night_ot_pay +
+    $holiday_pay + $restday_pay + $special_holiday_pay + $legal_holiday_pay;
+
 // Deductions
 $sss = 525; // Fixed SSS contribution
 $philhealth = 250; // Fixed PhilHealth contribution
@@ -71,7 +83,6 @@ $pagibig = 100; // Fixed Pag-IBIG contribution
 $total_deductions = $sss + $philhealth + $pagibig;
 
 // Calculate gross and net salary
-$gross_salary = $regular_pay + $overtime_pay;
 $net_salary = $gross_salary - $total_deductions;
 
 ?>
@@ -126,9 +137,11 @@ $net_salary = $gross_salary - $total_deductions;
 
                     <div>
                         <h3 class="text-xl font-bold text-gray-800">
-                            <?php echo htmlspecialchars($employee['full_name']); ?></h3>
+                            <?php echo htmlspecialchars($employee['full_name']); ?>
+                        </h3>
                         <p class="text-blue-600"><?php echo htmlspecialchars($employee['job_position']); ?> •
-                            <?php echo htmlspecialchars($employee['department']); ?></p>
+                            <?php echo htmlspecialchars($employee['department']); ?>
+                        </p>
                     </div>
                 </div>
 
@@ -162,6 +175,7 @@ $net_salary = $gross_salary - $total_deductions;
             <!-- Salary Details -->
             <div class="p-8">
                 <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Earnings</h4>
+                <!-- Replace the earnings section with this updated version that shows all categories -->
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
                     <div class="grid grid-cols-3 gap-4 border-b border-gray-200 pb-4 mb-4">
                         <div class="font-medium text-gray-600">Description</div>
@@ -169,16 +183,69 @@ $net_salary = $gross_salary - $total_deductions;
                         <div class="font-medium text-gray-600 text-right">Amount</div>
                     </div>
 
+                    <!-- Regular Hours - Always show -->
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Regular Hours</div>
-                        <div><?php echo number_format($total_hours_worked, 2); ?> hrs × ₱<?php echo number_format($hourly_rate, 2); ?></div>
+                        <div><?php echo number_format($total_hours_worked, 2); ?> hrs ×
+                            ₱<?php echo number_format($hourly_rate, 2); ?></div>
                         <div class="text-right">₱<?php echo number_format($regular_pay, 2); ?></div>
                     </div>
 
+                    <!-- Overtime - Always show -->
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Overtime</div>
-                        <div><?php echo number_format($total_overtime_hours, 2); ?> hrs × ₱<?php echo number_format($overtime_rate, 2); ?></div>
+                        <div><?php echo number_format($total_overtime_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($overtime_rate, 2); ?></div>
                         <div class="text-right">₱<?php echo number_format($overtime_pay, 2); ?></div>
+                    </div>
+
+                    <!-- Night Differential - Always show -->
+                    <div
+                        class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed <?php echo ($total_night_hours == 0) ? 'bg-gray-50 text-gray-500' : ''; ?>">
+                        <div>Night Differential</div>
+                        <div><?php echo number_format($total_night_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($hourly_rate * 1.1, 2); ?></div>
+                        <div class="text-right">₱<?php echo number_format($night_diff_pay, 2); ?></div>
+                    </div>
+
+                    <!-- Night Overtime - Always show -->
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Night Overtime</div>
+                        <div><?php echo number_format($total_night_overtime_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($overtime_rate * 1.1, 2); ?></div>
+                        <div class="text-right">₱<?php echo number_format($night_ot_pay, 2); ?></div>
+                    </div>
+
+                    <!-- Holiday Hours - Always show -->
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Holiday Hours</div>
+                        <div><?php echo number_format($total_holiday_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($hourly_rate * 2, 2); ?></div>
+                        <div class="text-right">₱<?php echo number_format($holiday_pay, 2); ?></div>
+                    </div>
+
+                    <!-- Rest Day Hours - Always show -->
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Rest Day Hours</div>
+                        <div><?php echo number_format($total_restday_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($hourly_rate * 1.3, 2); ?></div>
+                        <div class="text-right">₱<?php echo number_format($restday_pay, 2); ?></div>
+                    </div>
+
+                    <!-- Special Holiday - Always show -->
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Special Holiday</div>
+                        <div><?php echo number_format($total_special_holiday_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($hourly_rate * 1.3, 2); ?></div>
+                        <div class="text-right">₱<?php echo number_format($special_holiday_pay, 2); ?></div>
+                    </div>
+
+                    <!-- Legal Holiday - Always show -->
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Legal Holiday</div>
+                        <div><?php echo number_format($total_legal_holiday_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($hourly_rate * 2, 2); ?></div>
+                        <div class="text-right">₱<?php echo number_format($legal_holiday_pay, 2); ?></div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4 pt-4 font-semibold">
@@ -209,70 +276,120 @@ $net_salary = $gross_salary - $total_deductions;
                 </div>
             </div>
 
-                        <!-- Space for tax breakdown if needed -->
-                        <div class="bg-gray-100 rounded-lg p-4">
-                            <h5 class="font-medium text-gray-700 mb-2">Year to Date Summary</h5>
-                            <div class="text-sm">
-                                <div class="flex justify-between mb-1">
-                                    <span>Gross YTD:</span>
-                                    <span>₱<?php echo number_format($gross_salary * 12, 2); ?></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Deductions YTD:</span>
-                                    <span>₱<?php echo number_format($total_deductions * 12, 2); ?></span>
-                                </div>
+            <!-- After the deductions section, add a salary summary section -->
+            <div class="p-8 bg-gradient-to-r from-blue-50 to-blue-100">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Salary Summary</h4>
+                <div class="bg-white rounded-lg p-6 shadow-sm">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span class="text-gray-600">Gross Earnings:</span>
+                                <span class="font-medium">₱<?php echo number_format($gross_salary, 2); ?></span>
+                            </div>
+                            <div class="flex justify-between mb-2">
+                                <span class="text-gray-600">Total Deductions:</span>
+                                <span
+                                    class="font-medium text-red-600">₱<?php echo number_format($total_deductions, 2); ?></span>
+                            </div>
+                            <div class="flex justify-between pt-2 border-t border-gray-200">
+                                <span class="font-bold text-gray-700">Net Pay:</span>
+                                <span
+                                    class="font-bold text-green-700 text-xl">₱<?php echo number_format($net_salary, 2); ?></span>
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="font-medium text-gray-700 mb-2">Payment Information</h5>
+                            <p class="text-sm mb-1"><span class="text-gray-600">Payment Method:</span> Direct Deposit
+                            </p>
+                            <p class="text-sm mb-1"><span class="text-gray-600">Pay Date:</span>
+                                <?php echo date('F d, Y'); ?></p>
+                            <p class="text-sm"><span class="text-gray-600">Pay Period:</span>
+                                <?php echo $current_period; ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Replace the existing YTD section with this improved version -->
+            <div class="px-8 pb-8">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Year to Date Summary</h4>
+                <div class="bg-gray-50 rounded-lg p-4 shadow-sm border border-gray-100">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="p-3 bg-white rounded-lg shadow-sm">
+                            <div class="text-xs text-gray-500 mb-1">Gross YTD</div>
+                            <div class="text-lg font-bold text-gray-800">
+                                ₱<?php echo number_format($gross_salary * 12, 2); ?></div>
+                        </div>
+                        <div class="p-3 bg-white rounded-lg shadow-sm">
+                            <div class="text-xs text-gray-500 mb-1">Deductions YTD</div>
+                            <div class="text-lg font-bold text-red-600">
+                                ₱<?php echo number_format($total_deductions * 12, 2); ?></div>
+                        </div>
+                        <div class="p-3 bg-white rounded-lg shadow-sm">
+                            <div class="text-xs text-gray-500 mb-1">Net Income YTD</div>
+                            <div class="text-lg font-bold text-green-600">
+                                ₱<?php echo number_format(($gross_salary - $total_deductions) * 12, 2); ?></div>
+                        </div>
+                        <div class="p-3 bg-white rounded-lg shadow-sm">
+                            <div class="text-xs text-gray-500 mb-1">Total Hours YTD</div>
+                            <div class="text-lg font-bold text-blue-600">
+                                <?php echo number_format($total_hours_worked * 12, 2); ?>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-             <!-- Net Salary -->
-             <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 flex justify-between items-center">
-                <div>
-                    <h4 class="text-lg font-medium text-gray-800">Net Pay</h4>
-                </div>
-                <div class="text-3xl font-bold text-green-700">₱<?php echo number_format($net_salary, 2); ?></div>
-            </div>
-
-
-            <!-- Footer -->
-            <div class="px-8 py-4 text-center text-xs text-gray-500">
-                <p>This is an electronic payslip and is valid without signature.</p>
-                <p>For questions regarding this payslip, please contact HR department.</p>
-            </div>
+            <!-- Space for tax breakdown if needed -->
         </div>
+    </div>
+    </div>
 
-        <!-- Actions -->
-        <div class="flex justify-center mt-8 space-x-4">
-            <a href="dashboard.php"
-                class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Dashboard
-            </a>
-            <button onclick="printPayslip()"
-                class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                Print Payslip
-            </button>
-            <button onclick="downloadPDF()"
-                class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download PDF
-            </button>
+    <!-- Net Salary -->
+    <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 flex justify-between items-center">
+        <div>
+            <h4 class="text-lg font-medium text-gray-800">Net Pay</h4>
         </div>
+        <div class="text-3xl font-bold text-green-700">₱<?php echo number_format($net_salary, 2); ?></div>
+    </div>
+
+
+    <!-- Footer -->
+    <div class="px-8 py-4 text-center text-xs text-gray-500">
+        <p>This is an electronic payslip and is valid without signature.</p>
+        <p>For questions regarding this payslip, please contact HR department.</p>
+    </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-center mt-8 space-x-4">
+        <a href="dashboard.php"
+            class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+        </a>
+        <button onclick="printPayslip()"
+            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2-2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Payslip
+        </button>
+        <button onclick="downloadPDF()"
+            class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download PDF
+        </button>
+    </div>
     </div>
 </main>
 
