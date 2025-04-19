@@ -1,18 +1,17 @@
 <?php
 session_start();
-// Process login if form is submitted
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email']) && isset($_POST['password'])) {
-    include 'config.php'; // Database configuration
+include 'config.php'; // Database configuration
 
-    // Retrieve email and password from POST request
+$employee_error_message = "";
+$admin_error_message = "";
+
+// Handle Employee Login
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email']) && isset($_POST['password']) && !isset($_POST['admin_login'])) {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
 
-    $error_message = "";
-
-    // Validate input
     if (!empty($email) && !empty($password)) {
-        // SQL to fetch user by email
+        // Fetch employee by email
         $sql = "SELECT * FROM employees WHERE email = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $email);
@@ -24,30 +23,118 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email']) && isset($_PO
 
             // Verify password
             if (password_verify($password, $user['password'])) {
-                // Set session variables and redirect to dashboard
+                // Set session variables and redirect to employee dashboard
+                session_regenerate_id(true);
                 $_SESSION['loggedin'] = true;
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_name'] = $user['full_name'];
                 header("Location: dashboard.php");
                 exit();
             } else {
-                $error_message = "Invalid password. Please try again.";
+                $employee_error_message = "Invalid password. Please try again.";
             }
         } else {
-            $error_message = "No user found with this email.";
+            $employee_error_message = "No user found with this email.";
         }
     } else {
-        $error_message = "Please enter both email and password.";
+        $employee_error_message = "Please enter both email and password.";
     }
+}
 
-    // If we reached here, there was an error in login
-    // We'll handle this with JavaScript below
+// Handle Admin Login
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($_POST['password']) && isset($_POST['admin_login'])) {
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
+
+    if (!empty($username) && !empty($password)) {
+        // Fetch admin by username
+        $sql = "SELECT * FROM admins WHERE username = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $admin = $result->fetch_assoc();
+
+            // Verify password
+            if (password_verify($password, $admin['password'])) {
+                // Set session variables and redirect based on role
+                session_regenerate_id(true);
+                $_SESSION['admin_loggedin'] = true;
+                $_SESSION['admin_id'] = $admin['id'];
+                $_SESSION['admin_username'] = $admin['username'];
+                $_SESSION['admin_role'] = $admin['role'];
+
+                if ($admin['role'] === 'admin') {
+                    header("Location: hr/hr_dashboard.php");
+                } elseif ($admin['role'] === 'superadmin') {
+                    header("Location: superadmin/superadmin.php");
+                }
+                exit();
+            } else {
+                $admin_error_message = "Invalid password.";
+            }
+        } else {
+            $admin_error_message = "Admin not found.";
+        }
+    } else {
+        $admin_error_message = "Please enter both username and password.";
+    }
 }
 ?>
 
 <?php include 'components/header.php'; ?>
 
 <main class="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen relative">
+
+    <!-- Login Modals -->
+    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center <?php echo !empty($employee_error_message) ? '' : 'hidden'; ?>">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-50"></div>
+        <div class="bg-white shadow-lg rounded-lg w-full max-w-md p-6 relative">
+            <h2 class="text-2xl font-bold text-blue-600 text-center mb-6">Employee Login</h2>
+            <?php if (!empty($employee_error_message)): ?>
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <span><?php echo $employee_error_message; ?></span>
+                </div>
+            <?php endif; ?>
+            <form method="POST">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" name="email" class="w-full mt-1 p-3 border rounded-lg" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" name="password" class="w-full mt-1 p-3 border rounded-lg" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white px-6 py-3 mt-4 rounded-lg">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-login-modal" class="fixed inset-0 z-50 flex items-center justify-center <?php echo !empty($admin_error_message) ? '' : 'hidden'; ?>">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-50"></div>
+        <div class="bg-white shadow-lg rounded-lg w-full max-w-md p-6 relative">
+            <h2 class="text-2xl font-bold text-indigo-600 text-center mb-6">Admin Login</h2>
+            <?php if (!empty($admin_error_message)): ?>
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <span><?php echo $admin_error_message; ?></span>
+                </div>
+            <?php endif; ?>
+            <form method="POST">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="username" name="username" class="w-full mt-1 p-3 border rounded-lg" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" name="password" class="w-full mt-1 p-3 border rounded-lg" required>
+                </div>
+                <input type="hidden" name="admin_login" value="1">
+                <button type="submit" class="w-full bg-indigo-600 text-white px-6 py-3 mt-4 rounded-lg">Login</button>
+            </form>
+        </div>
+    </div>
     <!-- Hero Section -->
     <section class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white py-20 relative overflow-hidden">
         <div class="absolute inset-0 opacity-10">
@@ -63,10 +150,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email']) && isset($_PO
                     class="bg-white text-indigo-700 font-semibold px-8 py-3 rounded-md shadow-lg hover:bg-gray-100 transition transform hover:-translate-y-1 hover:scale-105 animate-bounce-in">
                     Employee Login
                 </button>
-                <a href="hr/login.php"
-                    class="bg-indigo-900 text-white border border-indigo-400 font-semibold px-8 py-3 rounded-md shadow-lg hover:bg-indigo-800 transition transform hover:-translate-y-1">
-                    Admin Portal
-                </a>
+                <button id="admin-login-btn"
+    class="bg-indigo-900 text-white border border-indigo-400 font-semibold px-8 py-3 rounded-md shadow-lg hover:bg-indigo-800 transition transform hover:-translate-y-1">
+    Admin Portal
+</button>
             </div>
         </div>
     </section>
@@ -260,54 +347,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email']) && isset($_PO
         </form>
     </section>
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <!-- Overlay -->
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-50" id="modal-overlay"></div>
-
-        <!-- Modal Content -->
-        <div class="bg-white shadow-lg rounded-lg w-full max-w-md p-6 relative z-10 animate-fade-in-up">
-            <!-- Close Button -->
-            <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-
-            <h2 class="text-2xl font-bold text-blue-600 text-center mb-6">Employee Login</h2>
-
-            <!-- Error message container -->
-            <div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden"
-                role="alert">
-                <span class="block sm:inline" id="error-text"></span>
-            </div>
-
-            <form id="login-form" method="POST" class="space-y-6">
-                <!-- Email Field -->
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" name="email"
-                        class="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                        placeholder="Enter your email" required>
-                </div>
-
-                <!-- Password Field -->
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <input type="password" id="password" name="password"
-                        class="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                        placeholder="Enter your password" required>
-                </div>
-
-                <!-- Login Button -->
-                <button type="submit"
-                    class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition transform hover:-translate-y-1 hover:scale-105">
-                    Login
-                </button>
-            </form>
-        </div>
-    </div>
 </main>
 
 <?php include 'components/footer.php'; ?>

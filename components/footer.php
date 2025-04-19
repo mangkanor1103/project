@@ -49,6 +49,26 @@
             this.submit();
         });
     });
+
+    // Admin Modal Logic
+const adminLoginBtn = document.getElementById('admin-login-btn');
+const adminModal = document.getElementById('admin-login-modal');
+const adminModalOverlay = document.getElementById('admin-modal-overlay');
+const closeAdminModal = document.getElementById('close-admin-modal');
+
+// Open Admin Modal
+adminLoginBtn.addEventListener('click', () => {
+    adminModal.classList.remove('hidden');
+});
+
+// Close Admin Modal
+closeAdminModal.addEventListener('click', () => {
+    adminModal.classList.add('hidden');
+});
+
+adminModalOverlay.addEventListener('click', () => {
+    adminModal.classList.add('hidden');
+});
 </script>
 
 </body>

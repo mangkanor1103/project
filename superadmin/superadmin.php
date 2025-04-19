@@ -1,10 +1,10 @@
 <?php
 session_start();
 
-// Check if the user is logged in
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+// Check if the user is logged in and has a valid role
+if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
     // Redirect to login page if not logged in
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 ?>
@@ -13,7 +13,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
 
 <main class="bg-gray-100 min-h-screen">
     <section class="container mx-auto px-4 py-8">
-        <h1 class="text-4xl font-bold text-blue-600 mb-6 text-center">Welcome, <?= htmlspecialchars($_SESSION['username']); ?>!</h1>
+        <h1 class="text-4xl font-bold text-blue-600 mb-6 text-center">Welcome, <?= htmlspecialchars($_SESSION['admin_username']); ?>!</h1>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Add Role -->
             <div class="bg-white shadow-md rounded-lg p-6">

@@ -2,11 +2,13 @@
 session_start();
 include '../config.php';
 
-// Check if the HR Admin is logged in
-if (!isset($_SESSION['hr_loggedin']) || $_SESSION['hr_loggedin'] !== true) {
-    header("Location: login.php");
+// Check if the user is logged in and has the HR admin role
+if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
+    // Redirect to login page if not logged in
+    header("Location: ../login.php");
     exit();
 }
+
 ?>
 
 <?php include '../components/header.php'; ?>
