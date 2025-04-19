@@ -8,6 +8,9 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     exit();
 }
 
+// Define the current pay period (e.g., "April 2025")
+$current_period = date('F Y');
+
 // Fetch employee details
 $user_id = $_SESSION['user_id'];
 $sql = "SELECT * FROM employees WHERE id = ?";
@@ -17,42 +20,64 @@ $stmt->execute();
 $result = $stmt->get_result();
 $employee = $result->fetch_assoc();
 
-// Calculate salary components
-$date = date('Y-m'); // Current month
-$attendance_sql = "SELECT SUM(hours_worked) AS total_hours, SUM(overtime_hours) AS total_overtime FROM attendance WHERE employee_id = ? AND date LIKE ?";
+if (!$employee) {
+    die("Employee record not found.");
+}
+
+// Fetch attendance details for the current month
+$current_month = date('Y-m');
+$attendance_sql = "
+    SELECT 
+        SUM(hours_worked) AS total_hours_worked,
+        SUM(overtime_hours) AS total_overtime_hours,
+        SUM(night_hours) AS total_night_hours,
+        SUM(night_overtime_hours) AS total_night_overtime_hours,
+        SUM(holiday_hours) AS total_holiday_hours,
+        SUM(restday_hours) AS total_restday_hours,
+        SUM(special_holiday_hours) AS total_special_holiday_hours,
+        SUM(legal_holiday_hours) AS total_legal_holiday_hours
+    FROM attendance 
+    WHERE employee_id = ? AND date LIKE ?";
 $attendance_stmt = $conn->prepare($attendance_sql);
-$like_date = $date . '%';
+$like_date = $current_month . '%';
 $attendance_stmt->bind_param("is", $user_id, $like_date);
 $attendance_stmt->execute();
-$attendance_result = $attendance_stmt->get_result()->fetch_assoc();
+$attendance = $attendance_stmt->get_result()->fetch_assoc();
 
-$total_hours = $attendance_result['total_hours'] ?? 0;
-$total_overtime = $attendance_result['total_overtime'] ?? 0;
+// Initialize attendance data with default values if null
+$total_hours_worked = $attendance['total_hours_worked'] ?? 0;
+$total_overtime_hours = $attendance['total_overtime_hours'] ?? 0;
+$total_night_hours = $attendance['total_night_hours'] ?? 0;
+$total_night_overtime_hours = $attendance['total_night_overtime_hours'] ?? 0;
+$total_holiday_hours = $attendance['total_holiday_hours'] ?? 0;
+$total_restday_hours = $attendance['total_restday_hours'] ?? 0;
+$total_special_holiday_hours = $attendance['total_special_holiday_hours'] ?? 0;
+$total_legal_holiday_hours = $attendance['total_legal_holiday_hours'] ?? 0;
 
 // Salary calculations
-$basic_salary = $employee['basic_salary'];
-$hourly_rate = $basic_salary / 160; // Assuming 160 work hours in a month
-$overtime_rate = $hourly_rate * 1.5;
+$basic_salary = $employee['basic_salary']; // Monthly salary from DB
+$basic_rate_per_day = $basic_salary / 22; // Daily rate
+$hourly_rate = $basic_rate_per_day / 8; // Hourly rate
+$overtime_rate = $hourly_rate * 1.25; // Overtime rate
 
-$regular_pay = $hourly_rate * $total_hours;
-$overtime_pay = $overtime_rate * $total_overtime;
-$gross_salary = $regular_pay + $overtime_pay;
+// Calculate pay components
+$regular_pay = $hourly_rate * $total_hours_worked;
+$overtime_pay = $overtime_rate * $total_overtime_hours;
 
 // Deductions
-$sss = 0.045 * $basic_salary; // Example SSS contribution (4.5%)
-$philhealth = 0.03 * $basic_salary; // Example PhilHealth contribution (3%)
+$sss = 525; // Fixed SSS contribution
+$philhealth = 250; // Fixed PhilHealth contribution
 $pagibig = 100; // Fixed Pag-IBIG contribution
 $total_deductions = $sss + $philhealth + $pagibig;
 
-// Net salary
+// Calculate gross and net salary
+$gross_salary = $regular_pay + $overtime_pay;
 $net_salary = $gross_salary - $total_deductions;
 
-// Format date for display
-$current_period = date('F Y');
 ?>
 
-<?php include 'components/header.php'; ?>
 
+<?php include 'components/header.php'; ?>
 <main class="bg-gradient-to-br from-blue-50 to-gray-100 min-h-screen py-10">
     <div class="container mx-auto px-4 py-8 max-w-5xl">
         <!-- Payslip Header -->
@@ -146,15 +171,13 @@ $current_period = date('F Y');
 
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Regular Hours</div>
-                        <div><?php echo number_format($total_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate, 2); ?></div>
+                        <div><?php echo number_format($total_hours_worked, 2); ?> hrs × ₱<?php echo number_format($hourly_rate, 2); ?></div>
                         <div class="text-right">₱<?php echo number_format($regular_pay, 2); ?></div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Overtime</div>
-                        <div><?php echo number_format($total_overtime, 2); ?> hrs ×
-                            ₱<?php echo number_format($overtime_rate, 2); ?></div>
+                        <div><?php echo number_format($total_overtime_hours, 2); ?> hrs × ₱<?php echo number_format($overtime_rate, 2); ?></div>
                         <div class="text-right">₱<?php echo number_format($overtime_pay, 2); ?></div>
                     </div>
 
@@ -167,25 +190,24 @@ $current_period = date('F Y');
                 <!-- Deductions -->
                 <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Deductions</h4>
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
-                                <span>SSS Contribution</span>
-                                <span>₱<?php echo number_format($sss, 2); ?></span>
-                            </div>
-                            <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
-                                <span>PhilHealth</span>
-                                <span>₱<?php echo number_format($philhealth, 2); ?></span>
-                            </div>
-                            <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
-                                <span>Pag-IBIG</span>
-                                <span>₱<?php echo number_format($pagibig, 2); ?></span>
-                            </div>
-                            <div class="flex justify-between pt-3 font-semibold">
-                                <span>Total Deductions:</span>
-                                <span class="text-red-600">₱<?php echo number_format($total_deductions, 2); ?></span>
-                            </div>
-                        </div>
+                    <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
+                        <span>SSS Contribution</span>
+                        <span>₱<?php echo number_format($sss, 2); ?></span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
+                        <span>PhilHealth</span>
+                        <span>₱<?php echo number_format($philhealth, 2); ?></span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
+                        <span>Pag-IBIG</span>
+                        <span>₱<?php echo number_format($pagibig, 2); ?></span>
+                    </div>
+                    <div class="flex justify-between pt-3 font-semibold">
+                        <span>Total Deductions:</span>
+                        <span class="text-red-600">₱<?php echo number_format($total_deductions, 2); ?></span>
+                    </div>
+                </div>
+            </div>
 
                         <!-- Space for tax breakdown if needed -->
                         <div class="bg-gray-100 rounded-lg p-4">
@@ -205,14 +227,14 @@ $current_period = date('F Y');
                 </div>
             </div>
 
-            <!-- Net Salary -->
-            <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 flex justify-between items-center">
+             <!-- Net Salary -->
+             <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 flex justify-between items-center">
                 <div>
                     <h4 class="text-lg font-medium text-gray-800">Net Pay</h4>
-                    <p class="text-sm text-gray-600">Amount credited to your bank account</p>
                 </div>
                 <div class="text-3xl font-bold text-green-700">₱<?php echo number_format($net_salary, 2); ?></div>
             </div>
+
 
             <!-- Footer -->
             <div class="px-8 py-4 text-center text-xs text-gray-500">

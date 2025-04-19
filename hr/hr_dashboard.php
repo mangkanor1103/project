@@ -182,177 +182,150 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
         </div>
 
         <!-- Employee List -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 mb-10">
-            <div class="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-4 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-white">Employee Directory</h2>
-                <div class="text-gray-300 text-sm">Total: <?php echo $employee_count; ?> employees</div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Employee</th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Position</th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Department</th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Contact</th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <?php
-                        $modals = ''; // We'll collect modals here and echo them AFTER the table
-                        $query = "SELECT * FROM employees ORDER BY full_name ASC";
-                        $result = $conn->query($query);
-
-                        if ($result && $result->num_rows > 0) {
-                            while ($row = $result->fetch_assoc()) {
-                                $employee_id = $row['id'];
-                                echo '<tr class="hover:bg-gray-50">';
-
-                                // Employee with image (if available)
-                                echo '<td class="px-6 py-4 whitespace-nowrap">';
-                                echo '<div class="flex items-center">';
-
-                                // Avatar/Image
-                                echo '<div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 overflow-hidden">';
-                                if (!empty($row['image'])) {
-                                    echo '<img class="h-10 w-10 object-cover" src="../uploads/' . htmlspecialchars($row['image']) . '" alt="' . htmlspecialchars($row['full_name']) . '">';
-                                } else {
-                                    // Default avatar
-                                    echo '<svg class="h-10 w-10 text-gray-500 p-1" fill="currentColor" viewBox="0 0 20 20">';
-                                    echo '<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>';
-                                    echo '</svg>';
-                                }
-                                echo '</div>';
-
-                                // Name and email
-                                echo '<div class="ml-4">';
-                                echo '<div class="text-sm font-medium text-gray-900">' . htmlspecialchars($row['full_name']) . '</div>';
-                                echo '<div class="text-sm text-gray-500">' . htmlspecialchars($row['email']) . '</div>';
-                                echo '</div>';
-                                echo '</div>';
-                                echo '</td>';
-
-                                // Position
-                                echo '<td class="px-6 py-4 whitespace-nowrap">';
-                                echo '<div class="text-sm text-gray-900">' . htmlspecialchars($row['job_position']) . '</div>';
-                                echo '</td>';
-
-                                // Department
-                                echo '<td class="px-6 py-4 whitespace-nowrap">';
-                                echo '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">';
-                                echo htmlspecialchars($row['department']);
-                                echo '</span>';
-                                echo '</td>';
-
-                                // Contact
-                                echo '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">';
-                                echo htmlspecialchars($row['contact_number']);
-                                echo '</td>';
-
-                                // Actions
-                                echo '<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">';
-                                echo '<button onclick="document.getElementById(\'modal-' . $employee_id . '\').classList.remove(\'hidden\')" class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-2 transition-colors">';
-                                echo '<span class="flex items-center">';
-                                echo '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">';
-                                echo '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />';
-                                echo '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />';
-                                echo '</svg>';
-                                echo 'View Details';
-                                echo '</span>';
-                                echo '</button>';
-                                echo '</td>';
-                                echo '</tr>';
-
-                                // Collect modal HTML to be rendered after the table
-                                $modals .= "
-                                <div id='modal-$employee_id' class='fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50' onclick=\"if(event.target === this) this.classList.add('hidden');\">
-                                    <div class='bg-white w-full max-w-2xl p-0 rounded-xl shadow-2xl overflow-y-auto max-h-[90vh]'>
-                                        <!-- Employee profile header -->
-                                        <div class='bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4 text-white'>
-                                            <h2 class='text-xl font-bold'>Employee Details</h2>
-                                        </div>
-                                        
-                                        <!-- Employee info -->
-                                        <div class='p-6'>
-                                            <!-- Profile section -->
-                                            <div class='flex items-center mb-6'>
-                                                <div class='flex-shrink-0 h-20 w-20 rounded-full bg-gray-200 overflow-hidden mr-4'>";
-
-                                if (!empty($row['image'])) {
-                                    $modals .= "<img class='h-20 w-20 object-cover' src='../uploads/" . htmlspecialchars($row['image']) . "' alt='" . htmlspecialchars($row['full_name']) . "'>";
-                                } else {
-                                    $modals .= "<svg class='h-20 w-20 text-gray-500 p-2' fill='currentColor' viewBox='0 0 20 20'>
-                                                    <path fill-rule='evenodd' d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z' clip-rule='evenodd'></path>
-                                                </svg>";
-                                }
-
-                                $modals .= "    </div>
-                                                <div>
-                                                    <h3 class='text-xl font-bold text-gray-900'>" . htmlspecialchars($row['full_name']) . "</h3>
-                                                    <p class='text-blue-600'>" . htmlspecialchars($row['job_position']) . " • " . htmlspecialchars($row['department']) . "</p>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Info grid -->
-                                            <div class='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                                                <!-- Personal Information -->
-                                                <div class='space-y-3'>
-                                                    <h4 class='text-sm font-semibold text-gray-500 uppercase tracking-wider'>Personal Information</h4>
-                                                    <div class='bg-gray-50 p-4 rounded-lg space-y-2'>
-                                                        <p><span class='font-medium text-gray-600'>Date of Birth:</span> <span class='text-gray-800'>" . htmlspecialchars($row['dob']) . "</span></p>
-                                                        <p><span class='font-medium text-gray-600'>Gender:</span> <span class='text-gray-800'>" . htmlspecialchars($row['gender']) . "</span></p>
-                                                        <p><span class='font-medium text-gray-600'>Email:</span> <span class='text-gray-800'>" . htmlspecialchars($row['email']) . "</span></p>
-                                                        <p><span class='font-medium text-gray-600'>Phone:</span> <span class='text-gray-800'>" . htmlspecialchars($row['contact_number']) . "</span></p>
-                                                        <p><span class='font-medium text-gray-600'>Address:</span> <span class='text-gray-800'>" . htmlspecialchars($row['home_address']) . "</span></p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Employment Information -->
-                                                <div class='space-y-3'>
-                                                    <h4 class='text-sm font-semibold text-gray-500 uppercase tracking-wider'>Employment Information</h4>
-                                                    <div class='bg-gray-50 p-4 rounded-lg space-y-2'>
-                                                        <p><span class='font-medium text-gray-600'>Position:</span> <span class='text-gray-800'>" . htmlspecialchars($row['job_position']) . "</span></p>
-                                                        <p><span class='font-medium text-gray-600'>Department:</span> <span class='text-gray-800'>" . htmlspecialchars($row['department']) . "</span></p>
-                                                        <p><span class='font-medium text-gray-600'>Date Hired:</span> <span class='text-gray-800'>" . htmlspecialchars($row['date_hired'] ?? 'N/A') . "</span></p>
-                                                        <p><span class='font-medium text-gray-600'>Status:</span> <span class='text-gray-800'>" . htmlspecialchars($row['status'] ?? 'Active') . "</span></p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class='bg-gray-50 px-6 py-4 flex justify-end'>
-                                            <button onclick=\"document.getElementById('modal-$employee_id').classList.add('hidden')\" class='px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center'>
-                                                <svg xmlns='http://www.w3.org/2000/svg' class='h-4 w-4 mr-1' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-                                                    <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 18L18 6M6 6l12 12' />
-                                                </svg>
-                                                Close
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>";
-                            }
-                        } else {
-                            echo "<tr><td colspan='6' class='text-center px-6 py-4 text-gray-500'>No employees found.</td></tr>";
-                        }
-                        ?>
-                    </tbody>
-                </table>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-                <p class="text-sm text-gray-500">Showing all employees</p>
-            </div>
+<div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 mb-10">
+    <div class="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-4 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-white">Employee Directory</h2>
+        <div class="text-gray-300 text-sm">Total: 
+            <?php 
+            $employee_count = $conn->query("SELECT COUNT(*) as count FROM employees")->fetch_assoc()['count']; 
+            echo $employee_count; 
+            ?> employees
         </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <?php
+                $modals = ''; // Collect modals here
+                $query = "SELECT * FROM employees ORDER BY full_name ASC";
+                $result = $conn->query($query);
+
+                if ($result && $result->num_rows > 0) {
+                    while ($row = $result->fetch_assoc()) {
+                        $employee_id = $row['id'];
+                        echo '<tr class="hover:bg-gray-50">';
+                        echo '<td class="px-6 py-4 whitespace-nowrap">';
+                        echo '<div class="flex items-center">';
+                        // Avatar/Image
+                        echo '<div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 overflow-hidden">';
+                        if (!empty($row['image'])) {
+                            echo '<img class="h-10 w-10 object-cover" src="../uploads/' . htmlspecialchars($row['image']) . '" alt="' . htmlspecialchars($row['full_name']) . '">';
+                        } else {
+                            echo '<svg class="h-10 w-10 text-gray-500 p-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>';
+                        }
+                        echo '</div>';
+                        // Name and email
+                        echo '<div class="ml-4">';
+                        echo '<div class="text-sm font-medium text-gray-900">' . htmlspecialchars($row['full_name']) . '</div>';
+                        echo '<div class="text-sm text-gray-500">' . htmlspecialchars($row['email']) . '</div>';
+                        echo '</div>';
+                        echo '</div>';
+                        echo '</td>';
+                        // Position
+                        echo '<td class="px-6 py-4 whitespace-nowrap">' . htmlspecialchars($row['job_position']) . '</td>';
+                        // Department
+                        echo '<td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">' . htmlspecialchars($row['department']) . '</span></td>';
+                        // Contact
+                        echo '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' . htmlspecialchars($row['contact_number']) . '</td>';
+                        // Actions
+                        echo '<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">';
+                        echo '<button onclick="document.getElementById(\'modal-' . $employee_id . '\').classList.remove(\'hidden\')" class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-2 transition-colors">Edit</button>';
+                        echo '</td>';
+                        echo '</tr>';
+
+                        $modals .= "
+<div id='modal-$employee_id' class='fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50'>
+    <div class='bg-white w-full max-w-2xl p-6 rounded-xl shadow-2xl overflow-y-auto max-h-[90vh]'>
+        <h2 class='text-xl font-bold mb-4'>Edit Employee</h2>
+        <form action='edit_employee_action.php?id=" . $employee_id . "' method='POST' enctype='multipart/form-data'>
+            <input type='hidden' name='id' value='" . $employee_id . "'>
+            <div class='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Full Name</label>
+                    <input type='text' name='full_name' value='" . htmlspecialchars($row['full_name']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Date of Birth</label>
+                    <input type='date' name='dob' value='" . htmlspecialchars($row['dob']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Gender</label>
+                    <select name='gender' class='block w-full mt-1 border-gray-300 rounded-md'>
+                        <option value='Male' " . ($row['gender'] == 'Male' ? 'selected' : '') . ">Male</option>
+                        <option value='Female' " . ($row['gender'] == 'Female' ? 'selected' : '') . ">Female</option>
+                    </select>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Contact Number</label>
+                    <input type='text' name='contact_number' value='" . htmlspecialchars($row['contact_number']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Email</label>
+                    <input type='email' name='email' value='" . htmlspecialchars($row['email']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Home Address</label>
+                    <textarea name='home_address' class='block w-full mt-1 border-gray-300 rounded-md'>" . htmlspecialchars($row['home_address']) . "</textarea>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Job Position</label>
+                    <input type='text' name='job_position' value='" . htmlspecialchars($row['job_position']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Department</label>
+                    <input type='text' name='department' value='" . htmlspecialchars($row['department']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Date Hired</label>
+                    <input type='date' name='date_hired' value='" . htmlspecialchars($row['date_hired']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>SSS Number</label>
+                    <input type='text' name='sss_number' value='" . htmlspecialchars($row['sss_number']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>PhilHealth Number</label>
+                    <input type='text' name='philhealth_number' value='" . htmlspecialchars($row['philhealth_number']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Pag-IBIG Number</label>
+                    <input type='text' name='pagibig_number' value='" . htmlspecialchars($row['pagibig_number']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>TIN</label>
+                    <input type='text' name='tin' value='" . htmlspecialchars($row['tin']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+                <div>
+                    <label class='block text-sm font-medium text-gray-700'>Basic Salary</label>
+                    <input type='number' name='basic_salary' step='0.01' value='" . htmlspecialchars($row['basic_salary']) . "' class='block w-full mt-1 border-gray-300 rounded-md'>
+                </div>
+            </div>
+            <div class='mt-4'>
+                <button type='submit' class='bg-blue-600 text-white px-4 py-2 rounded-lg'>Save Changes</button>
+                <button type='button' onclick=\"document.getElementById('modal-$employee_id').classList.add('hidden')\" class='bg-gray-600 text-white px-4 py-2 rounded-lg'>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>";
+                    }
+                } else {
+                    echo "<tr><td colspan='5' class='text-center px-6 py-4'>No employees found.</td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
+    <?php echo $modals; ?>
+</div>
         <?php
         // Output all modals
         echo $modals;
