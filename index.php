@@ -63,7 +63,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email']) && isset($_PO
                     class="bg-white text-indigo-700 font-semibold px-8 py-3 rounded-md shadow-lg hover:bg-gray-100 transition transform hover:-translate-y-1 hover:scale-105 animate-bounce-in">
                     Employee Login
                 </button>
-                <a href="admin_login.php"
+                <a href="hr/login.php"
                     class="bg-indigo-900 text-white border border-indigo-400 font-semibold px-8 py-3 rounded-md shadow-lg hover:bg-indigo-800 transition transform hover:-translate-y-1">
                     Admin Portal
                 </a>
