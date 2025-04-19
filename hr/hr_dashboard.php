@@ -28,7 +28,7 @@ if (!isset($_SESSION['hr_loggedin']) || $_SESSION['hr_loggedin'] !== true) {
             <div class="bg-white shadow-md rounded-lg p-6">
                 <h2 class="text-xl font-bold text-blue-600 mb-4">Assign Department Manager</h2>
                 <p class="text-gray-700 mb-4">Promote an employee to Department Manager.</p>
-                <a href="create_employee.php#assign_manager" class="block bg-blue-600 text-white px-4 py-2 rounded shadow-md hover:bg-blue-700 transition text-center">
+                <a href="manager.php" class="block bg-blue-600 text-white px-4 py-2 rounded shadow-md hover:bg-blue-700 transition text-center">
                     Assign Manager
                 </a>
             </div>
