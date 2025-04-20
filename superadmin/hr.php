@@ -67,7 +67,8 @@ $admins = $result->fetch_all(MYSQLI_ASSOC);
 
 <div class="container mx-auto px-4 py-10">
     <!-- Back Button -->
-    <a href="superadmin.php" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition mb-6 inline-block">
+    <a href="superadmin.php"
+        class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition mb-6 inline-block">
         &larr; Back to Dashboard
     </a>
 
@@ -95,9 +96,12 @@ $admins = $result->fetch_all(MYSQLI_ASSOC);
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created
+                        At</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions
+                    </th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -134,10 +138,12 @@ $admins = $result->fetch_all(MYSQLI_ASSOC);
             </div>
             <div class="mb-4">
                 <label for="add-password" class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="add-password" name="password" class="mt-1 p-3 border rounded-lg w-full" required>
+                <input type="password" id="add-password" name="password" class="mt-1 p-3 border rounded-lg w-full"
+                    required>
             </div>
             <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg">Add Admin</button>
-            <button type="button" onclick="closeModal('add-modal')" class="ml-2 bg-gray-300 text-gray-800 px-6 py-3 rounded-lg">Cancel</button>
+            <button type="button" onclick="closeModal('add-modal')"
+                class="ml-2 bg-gray-300 text-gray-800 px-6 py-3 rounded-lg">Cancel</button>
         </form>
     </div>
 </div>
@@ -151,10 +157,12 @@ $admins = $result->fetch_all(MYSQLI_ASSOC);
             <input type="hidden" id="edit-id" name="id">
             <div class="mb-4">
                 <label for="edit-username" class="block text-sm font-medium text-gray-700">Username</label>
-                <input type="text" id="edit-username" name="username" class="mt-1 p-3 border rounded-lg w-full" required>
+                <input type="text" id="edit-username" name="username" class="mt-1 p-3 border rounded-lg w-full"
+                    required>
             </div>
             <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg">Update Admin</button>
-            <button type="button" onclick="closeModal('edit-modal')" class="ml-2 bg-gray-300 text-gray-800 px-6 py-3 rounded-lg">Cancel</button>
+            <button type="button" onclick="closeModal('edit-modal')"
+                class="ml-2 bg-gray-300 text-gray-800 px-6 py-3 rounded-lg">Cancel</button>
         </form>
     </div>
 </div>
@@ -168,7 +176,8 @@ $admins = $result->fetch_all(MYSQLI_ASSOC);
             <input type="hidden" name="action" value="delete">
             <input type="hidden" id="delete-id" name="id">
             <button type="submit" class="bg-red-600 text-white px-6 py-3 rounded-lg">Delete</button>
-            <button type="button" onclick="closeModal('delete-modal')" class="ml-2 bg-gray-300 text-gray-800 px-6 py-3 rounded-lg">Cancel</button>
+            <button type="button" onclick="closeModal('delete-modal')"
+                class="ml-2 bg-gray-300 text-gray-800 px-6 py-3 rounded-lg">Cancel</button>
         </form>
     </div>
 </div>
@@ -193,5 +202,3 @@ $admins = $result->fetch_all(MYSQLI_ASSOC);
         openModal('delete-modal');
     }
 </script>
-
-<?php include '../components/footer.php'; ?>
