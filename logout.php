@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 icon: 'success',
                 title: 'Logged Out',
                 text: 'You have been logged out successfully!',
-                timer: 2000,
+                timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: false
             }).then(() => {

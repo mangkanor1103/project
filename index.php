@@ -81,8 +81,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
     $password = trim($_POST['password']);
 
     if (!empty($username) && !empty($password)) {
-        // Fetch admin by username
-        $sql = "SELECT * FROM admins WHERE username = ?";
+        // Fetch admin from employees table by email
+        $sql = "SELECT * FROM employees WHERE email = ? AND job_position = 'Manager'";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $username);
         $stmt->execute();
@@ -93,24 +93,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
 
             // Verify password
             if (password_verify($password, $admin['password'])) {
-                // Set session variables and redirect based on role
+                // Set session variables
                 session_regenerate_id(true);
                 $_SESSION['admin_loggedin'] = true;
                 $_SESSION['admin_id'] = $admin['id'];
-                $_SESSION['admin_username'] = $admin['username'];
-                $_SESSION['admin_role'] = $admin['role'];
+                $_SESSION['admin_username'] = $admin['full_name'];
+                $_SESSION['admin_role'] = $admin['job_position'];
 
-                if ($admin['role'] === 'admin') {
-                    header("Location: hr/hr_dashboard.php");
-                } elseif ($admin['role'] === 'superadmin') {
-                    header("Location: superadmin/superadmin.php");
-                }
+                // Redirect to manager dashboard
+                header("Location: manager/dash.php");
                 exit();
             } else {
                 $admin_error_message = "Invalid password.";
             }
         } else {
-            $admin_error_message = "Admin not found.";
+            $admin_error_message = "Admin not found or not authorized.";
         }
     } else {
         $admin_error_message = "Please enter both username and password.";
@@ -123,8 +120,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
 <main class="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen relative">
 
     <!-- Login Modals -->
-    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center <?php echo !empty($employee_error_message) ? '' : 'hidden'; ?>">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-50"></div>
+    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-50" onclick="closeModal('login-modal')"></div>
         <div class="bg-white shadow-lg rounded-lg w-full max-w-md p-6 relative">
             <h2 class="text-2xl font-bold text-blue-600 text-center mb-6">Employee Login</h2>
             <?php if (!empty($employee_error_message)): ?>
@@ -132,7 +129,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
                     <span><?php echo $employee_error_message; ?></span>
                 </div>
             <?php endif; ?>
-            <form method="POST">
+            <form method="POST" onsubmit="return validateForm('login-modal')">
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
                     <input type="email" id="email" name="email" class="w-full mt-1 p-3 border rounded-lg" required>
@@ -146,8 +143,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
         </div>
     </div>
 
-    <div id="admin-login-modal" class="fixed inset-0 z-50 flex items-center justify-center <?php echo !empty($admin_error_message) ? '' : 'hidden'; ?>">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-50"></div>
+    <div id="admin-login-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-50" onclick="closeModal('admin-login-modal')"></div>
         <div class="bg-white shadow-lg rounded-lg w-full max-w-md p-6 relative">
             <h2 class="text-2xl font-bold text-indigo-600 text-center mb-6">Admin Login</h2>
             <?php if (!empty($admin_error_message)): ?>
@@ -155,7 +152,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
                     <span><?php echo $admin_error_message; ?></span>
                 </div>
             <?php endif; ?>
-            <form method="POST">
+            <form method="POST" onsubmit="return validateForm('admin-login-modal')">
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
                     <input type="text" id="username" name="username" class="w-full mt-1 p-3 border rounded-lg" required>
@@ -169,6 +166,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
             </form>
         </div>
     </div>
+
+    <script>
+        // Open modal
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Validate form and close modal if fields are empty
+        function validateForm(modalId) {
+            const modal = document.getElementById(modalId);
+            const inputs = modal.querySelectorAll('input[required]');
+            let isValid = true;
+
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    isValid = false;
+                }
+            });
+
+            if (!isValid) {
+                closeModal(modalId);
+            }
+
+            return isValid;
+        }
+
+        // Event listeners for buttons
+        document.getElementById('employee-login-btn').addEventListener('click', () => openModal('login-modal'));
+        document.getElementById('admin-login-btn').addEventListener('click', () => openModal('admin-login-modal'));
+    </script>
+
     <!-- Hero Section -->
     <section class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white py-20 relative overflow-hidden">
         <div class="absolute inset-0 opacity-10">
