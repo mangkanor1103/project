@@ -81,8 +81,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
     $password = trim($_POST['password']);
 
     if (!empty($username) && !empty($password)) {
-        // Fetch admin from employees table by email
-        $sql = "SELECT * FROM employees WHERE email = ? AND job_position = 'Manager'";
+        // First, check the admins table
+        $sql = "SELECT * FROM admins WHERE username = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $username);
         $stmt->execute();
@@ -97,25 +97,56 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
                 session_regenerate_id(true);
                 $_SESSION['admin_loggedin'] = true;
                 $_SESSION['admin_id'] = $admin['id'];
-                $_SESSION['admin_username'] = $admin['full_name'];
-                $_SESSION['admin_role'] = $admin['job_position'];
+                $_SESSION['admin_username'] = $admin['username'];
+                $_SESSION['admin_role'] = $admin['role']; // Assuming 'role' column exists in the 'admins' table
 
-                // Redirect to manager dashboard
-                header("Location: manager/dash.php");
+                // Redirect based on role
+                if ($admin['role'] === 'superadmin') {
+                    header("Location: superadmin/superadmin.php");
+                } elseif ($admin['role'] === 'admin') {
+                    header("Location: hr/hr_dashboard.php");
+                } else {
+                    $admin_error_message = "Unauthorized role.";
+                }
                 exit();
             } else {
                 $admin_error_message = "Invalid password.";
             }
         } else {
-            $admin_error_message = "Admin not found or not authorized.";
+            // If not found in admins table, check the employees table for managers
+            $sql = "SELECT * FROM employees WHERE email = ? AND job_position = 'Manager'";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("s", $username);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result->num_rows > 0) {
+                $manager = $result->fetch_assoc();
+
+                // Verify password
+                if (password_verify($password, $manager['password'])) {
+                    // Set session variables
+                    session_regenerate_id(true);
+                    $_SESSION['admin_loggedin'] = true;
+                    $_SESSION['admin_id'] = $manager['id'];
+                    $_SESSION['admin_username'] = $manager['full_name'];
+                    $_SESSION['admin_role'] = $manager['job_position'];
+
+                    // Redirect to manager dashboard
+                    header("Location: manager/dash.php");
+                    exit();
+                } else {
+                    $admin_error_message = "Invalid password.";
+                }
+            } else {
+                $admin_error_message = "Admin not found or not authorized.";
+            }
         }
     } else {
         $admin_error_message = "Please enter both username and password.";
     }
 }
-?>
-
-<?php include 'components/header.php'; ?>
+ include 'components/header.php'; ?>
 
 <main class="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen relative">
 
