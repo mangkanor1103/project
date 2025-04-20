@@ -5,6 +5,40 @@ include 'config.php'; // Database configuration
 $employee_error_message = "";
 $admin_error_message = "";
 
+// Fetch announcements from the database
+$announcements = [];
+$sql = "SELECT * FROM announcements ORDER BY created_at DESC LIMIT 5";
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $announcements = $result->fetch_all(MYSQLI_ASSOC);
+}
+
+// Fetch events from the database
+$events = [];
+$sql = "SELECT * FROM calendar_events ORDER BY date ASC LIMIT 5";
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $events = $result->fetch_all(MYSQLI_ASSOC);
+}
+
+// Fetch total employees
+$total_employees = 0;
+$sql = "SELECT COUNT(*) AS total FROM employees";
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    $total_employees = $row['total'];
+}
+
 // Handle Employee Login
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email']) && isset($_POST['password']) && !isset($_POST['admin_login'])) {
     $email = trim($_POST['email']);
@@ -222,98 +256,103 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
     <!-- Main Content Section -->
     <section class="container mx-auto px-4 mt-12">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <!-- Announcements Section -->
+            <!-- Announcements & Events Section -->
             <div class="bg-white shadow-lg rounded-lg overflow-hidden md:col-span-2">
                 <div class="bg-indigo-700 text-white py-4 px-6">
                     <h2 class="text-xl font-bold flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20"
-                            fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z"
-                                clip-rule="evenodd" />
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z" clip-rule="evenodd" />
                         </svg>
-                        Latest Announcements
+                        Announcements & Events
                     </h2>
                 </div>
                 <div class="p-6">
                     <ul class="space-y-4">
-                        <li class="flex items-start pb-3 border-b border-gray-200">
-                            <div class="flex-shrink-0 bg-blue-100 rounded-full p-1 mr-3 mt-1">
-                                <svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-gray-800"><span class="font-semibold text-indigo-600">April 20,
-                                        2025:</span> Payroll processing for April is complete. Download your payslips
-                                    now!</p>
-                            </div>
-                        </li>
-                        <li class="flex items-start pb-3 border-b border-gray-200">
-                            <div class="flex-shrink-0 bg-purple-100 rounded-full p-1 mr-3 mt-1">
-                                <svg class="h-4 w-4 text-purple-600" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-gray-800"><span class="font-semibold text-indigo-600">April 15,
-                                        2025:</span> Team building activity scheduled for April 30th. Confirm
-                                    attendance.</p>
-                            </div>
-                        </li>
-                        <li class="flex items-start">
-                            <div class="flex-shrink-0 bg-amber-100 rounded-full p-1 mr-3 mt-1">
-                                <svg class="h-4 w-4 text-amber-600" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-gray-800"><span class="font-semibold text-indigo-600">April 10,
-                                        2025:</span> Tax deduction updates have been applied to your profile.</p>
-                            </div>
-                        </li>
+                        <!-- Announcements -->
+                        <?php if (!empty($announcements)): ?>
+                            <?php foreach ($announcements as $announcement): ?>
+                                <li class="flex items-start pb-3 border-b border-gray-200">
+                                    <div class="flex-shrink-0 bg-blue-100 rounded-full p-1 mr-3 mt-1">
+                                        <svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-800">
+                                            <span class="font-semibold text-indigo-600"><?php echo date('F d, Y', strtotime($announcement['created_at'])); ?>:</span>
+                                            <?php echo htmlspecialchars($announcement['content']); ?>
+                                        </p>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <li class="text-gray-500">No announcements available.</li>
+                        <?php endif; ?>
+
+                        <!-- Events -->
+                        <?php if (!empty($events)): ?>
+                            <?php foreach ($events as $event): ?>
+                                <li class="flex items-start pb-3 border-b border-gray-200">
+                                    <div class="flex-shrink-0 bg-teal-100 rounded-full p-1 mr-3 mt-1">
+                                        <svg class="h-4 w-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-800">
+                                            <span class="font-semibold text-teal-600"><?php echo date('F d, Y', strtotime($event['date'])); ?>:</span>
+                                            <?php echo htmlspecialchars($event['event_name']); ?> (<?php echo htmlspecialchars($event['event_type']); ?>)
+                                        </p>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <li class="text-gray-500">No upcoming events.</li>
+                        <?php endif; ?>
                     </ul>
                 </div>
             </div>
 
-            <!-- Welcome Message Section -->
+            <!-- Quick Info Section -->
             <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-                <div class="bg-indigo-700 text-white py-4 px-6">
+                <div class="bg-gray-700 text-white py-4 px-6">
                     <h2 class="text-xl font-bold flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20"
-                            fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                clip-rule="evenodd" />
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z" clip-rule="evenodd" />
                         </svg>
                         Quick Info
                     </h2>
                 </div>
                 <div class="p-6">
-                    <div class="flex flex-col space-y-4">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <h3 class="font-medium text-blue-800 mb-1">Next Payday</h3>
-                            <p class="text-blue-600">April 30, 2025</p>
-                        </div>
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <h3 class="font-medium text-green-800 mb-1">Available Leave</h3>
-                            <p class="text-green-600">14 days remaining</p>
-                        </div>
-                        <div class="bg-purple-50 p-4 rounded-lg">
-                            <h3 class="font-medium text-purple-800 mb-1">HR Contact</h3>
-                            <p class="text-purple-600">hr@company.com</p>
-                        </div>
-                    </div>
+                    <ul class="space-y-4">
+                        <li class="text-gray-800">
+                            <span class="font-semibold">Today's Date:</span> <?php echo date('F d, Y'); ?>
+                        </li>
+                        <li class="text-gray-800">
+                            <span class="font-semibold">Current Time:</span> <span id="current-time"></span>
+                        </li>
+                        <li class="text-gray-800">
+                            <span class="font-semibold">Upcoming Holiday:</span> Labor Day (May 1, 2025)
+                        </li>
+                        <li class="text-gray-800">
+                            <span class="font-semibold">Total Employees:</span> <?php echo $total_employees; ?>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
     </section>
+
+    <script>
+        // Update current time dynamically
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('current-time').textContent = timeString;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
 
     <!-- Feedback Form Section -->
     <section id="feedback-form" class="container mx-auto px-4 mt-16 mb-16">

@@ -54,23 +54,52 @@ $total_restday_hours = $attendance['total_restday_hours'] ?? 0;
 $total_special_holiday_hours = $attendance['total_special_holiday_hours'] ?? 0;
 $total_legal_holiday_hours = $attendance['total_legal_holiday_hours'] ?? 0;
 
+// Fetch today's attendance details
+$today_date = date('Y-m-d');
+$today_attendance_sql = "SELECT time_in FROM attendance WHERE employee_id = ? AND date = ?";
+$today_attendance_stmt = $conn->prepare($today_attendance_sql);
+$today_attendance_stmt->bind_param("is", $user_id, $today_date);
+$today_attendance_stmt->execute();
+$today_attendance = $today_attendance_stmt->get_result()->fetch_assoc();
+
+$regular_start_time = strtotime('08:00:00'); // Regular start time
+$employee_time_in = strtotime($today_attendance['time_in'] ?? '08:00:00'); // Employee's actual time in
+
+// Calculate late time in hours
+$late_seconds = max(0, $employee_time_in - $regular_start_time);
+$late_hours = $late_seconds / 3600; // Convert seconds to hours
+
+// Deduct late hours from total hours worked
+$total_hours_worked -= $late_hours;
+if ($total_hours_worked < 0) {
+    $total_hours_worked = 0; // Ensure total hours worked is not negative
+}
+
+// Convert late time to hours, minutes, and seconds for display
+$late_hours_display = floor($late_hours);
+$late_minutes_display = floor(($late_hours - $late_hours_display) * 60);
+$late_seconds_display = round((($late_hours - $late_hours_display) * 60 - $late_minutes_display) * 60);
+
 // Salary calculations
 $basic_salary = $employee['basic_salary']; // Monthly salary from DB
 $basic_rate_per_day = $basic_salary / 22; // Daily rate
 $hourly_rate = $basic_rate_per_day / 8; // Hourly rate
 $overtime_rate = $hourly_rate * 1.25; // Overtime rate
 
-// Calculate pay components
+// Calculate pay components with hours, minutes, and seconds
 $regular_pay = $hourly_rate * $total_hours_worked;
 $overtime_pay = $overtime_rate * $total_overtime_hours;
-
-// Add these calculations after the overtime_pay calculation
 $night_diff_pay = $hourly_rate * 1.1 * $total_night_hours;
 $night_ot_pay = $overtime_rate * 1.1 * $total_night_overtime_hours;
 $holiday_pay = $hourly_rate * 2 * $total_holiday_hours;
 $restday_pay = $hourly_rate * 1.3 * $total_restday_hours;
 $special_holiday_pay = $hourly_rate * 1.3 * $total_special_holiday_hours;
 $legal_holiday_pay = $hourly_rate * 2 * $total_legal_holiday_hours;
+
+// Convert total hours worked into hours, minutes, and seconds
+$total_hours = floor($total_hours_worked);
+$total_minutes = floor(($total_hours_worked - $total_hours) * 60);
+$total_seconds = round((($total_hours_worked - $total_hours) * 60 - $total_minutes) * 60);
 
 // Update the gross salary calculation to include all components
 $gross_salary = $regular_pay + $overtime_pay + $night_diff_pay + $night_ot_pay +
@@ -82,7 +111,7 @@ $philhealth = 250; // Fixed PhilHealth contribution
 $pagibig = 100; // Fixed Pag-IBIG contribution
 $total_deductions = $sss + $philhealth + $pagibig;
 
-// Calculate gross and net salary
+// Calculate net salary
 $net_salary = $gross_salary - $total_deductions;
 
 ?>
@@ -170,6 +199,18 @@ $net_salary = $gross_salary - $total_deductions;
                                 class="text-gray-800"><?php echo date('F d, Y'); ?></span></p>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Work Summary</h4>
+                        <p><span class="font-medium text-gray-600">Total Hours Worked:</span>
+                            <?php echo "$total_hours hrs $total_minutes mins $total_seconds secs"; ?>
+                        </p>
+                        <p><span class="font-medium text-gray-600">Late Time:</span>
+                            <?php echo "$late_hours_display hrs $late_minutes_display mins $late_seconds_display secs"; ?>
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <!-- Salary Details -->
@@ -186,25 +227,30 @@ $net_salary = $gross_salary - $total_deductions;
                     <!-- Regular Hours - Always show -->
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Regular Hours</div>
-                        <div><?php echo number_format($total_hours_worked, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate, 2); ?></div>
+                        <div>
+                            <?php echo "$total_hours hrs $total_minutes mins $total_seconds secs"; ?> ×
+                            ₱<?php echo number_format($hourly_rate, 2); ?>
+                        </div>
                         <div class="text-right">₱<?php echo number_format($regular_pay, 2); ?></div>
                     </div>
 
                     <!-- Overtime - Always show -->
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Overtime</div>
-                        <div><?php echo number_format($total_overtime_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($overtime_rate, 2); ?></div>
+                        <div>
+                            <?php echo number_format($total_overtime_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($overtime_rate, 2); ?>
+                        </div>
                         <div class="text-right">₱<?php echo number_format($overtime_pay, 2); ?></div>
                     </div>
 
                     <!-- Night Differential - Always show -->
-                    <div
-                        class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed <?php echo ($total_night_hours == 0) ? 'bg-gray-50 text-gray-500' : ''; ?>">
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Night Differential</div>
-                        <div><?php echo number_format($total_night_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate * 1.1, 2); ?></div>
+                        <div>
+                            <?php echo number_format($total_night_hours, 2); ?> hrs ×
+                            ₱<?php echo number_format($hourly_rate * 1.1, 2); ?>
+                        </div>
                         <div class="text-right">₱<?php echo number_format($night_diff_pay, 2); ?></div>
                     </div>
 
@@ -246,6 +292,16 @@ $net_salary = $gross_salary - $total_deductions;
                         <div><?php echo number_format($total_legal_holiday_hours, 2); ?> hrs ×
                             ₱<?php echo number_format($hourly_rate * 2, 2); ?></div>
                         <div class="text-right">₱<?php echo number_format($legal_holiday_pay, 2); ?></div>
+                    </div>
+
+                    <!-- Late Deduction -->
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Late Deduction</div>
+                        <div>
+                            <?php echo "$late_hours_display hrs $late_minutes_display mins $late_seconds_display secs"; ?> ×
+                            ₱<?php echo number_format($hourly_rate, 2); ?>
+                        </div>
+                        <div class="text-right text-red-600">-₱<?php echo number_format($hourly_rate * $late_hours, 2); ?></div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4 pt-4 font-semibold">

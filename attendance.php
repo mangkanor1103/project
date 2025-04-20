@@ -17,10 +17,31 @@ $stmt->execute();
 $result = $stmt->get_result();
 $employee = $result->fetch_assoc();
 
+// Fetch today's date
+$date = date('Y-m-d');
+
+// Check if today is a holiday or event
+$event_sql = "SELECT event_name, event_type FROM calendar_events WHERE date = ?";
+$event_stmt = $conn->prepare($event_sql);
+$event_stmt->bind_param("s", $date);
+$event_stmt->execute();
+$event_result = $event_stmt->get_result();
+$event = $event_result->fetch_assoc();
+
+$is_holiday = false;
+$is_special_event = false;
+
+if ($event) {
+    if ($event['event_type'] === 'Holiday') {
+        $is_holiday = true;
+    } elseif ($event['event_type'] === 'Event') {
+        $is_special_event = true;
+    }
+}
+
 // Handle attendance submission
 $success_message = $error_message = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $date = date('Y-m-d'); // Current date
     $time_now = date('H:i:s'); // Current time
 
     if (isset($_POST['time_in'])) {
@@ -34,9 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($attendance) {
             $error_message = "You have already logged your time-in for today.";
         } else {
-            $insert_sql = "INSERT INTO attendance (employee_id, date, time_in) VALUES (?, ?, ?)";
+            $insert_sql = "INSERT INTO attendance (employee_id, date, time_in, is_holiday, is_special_event) VALUES (?, ?, ?, ?, ?)";
             $insert_stmt = $conn->prepare($insert_sql);
-            $insert_stmt->bind_param("iss", $user_id, $date, $time_now);
+            $insert_stmt->bind_param("issii", $user_id, $date, $time_now, $is_holiday, $is_special_event);
             $insert_stmt->execute();
             $success_message = "Time-in logged successfully at $time_now!";
         }
@@ -49,21 +70,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attendance = $check_stmt->get_result()->fetch_assoc();
 
         if ($attendance && $attendance['time_out'] === null) {
-            $update_sql = "UPDATE attendance SET time_out = ? WHERE employee_id = ? AND date = ?";
-            $update_stmt = $conn->prepare($update_sql);
-            $update_stmt->bind_param("sis", $time_now, $user_id, $date);
-
-            // Calculate hours worked
             $time_in = strtotime($attendance['time_in']);
             $time_out = strtotime($time_now);
             $seconds_diff = $time_out - $time_in;
             $hours_worked = $seconds_diff / 3600; // Convert seconds to hours
 
-            // Update with hours worked
-            $update_hours_sql = "UPDATE attendance SET time_out = ?, hours_worked = ? WHERE employee_id = ? AND date = ?";
-            $update_hours_stmt = $conn->prepare($update_hours_sql);
-            $update_hours_stmt->bind_param("sdis", $time_now, $hours_worked, $user_id, $date);
-            $update_hours_stmt->execute();
+            // Calculate overtime, night hours, and other metrics
+            $overtime_hours = max(0, $hours_worked - 8); // Overtime is any work beyond 8 hours
+            $night_hours = 0;
+            $night_overtime_hours = 0;
+
+            // Check for night hours (10 PM to 6 AM)
+            $night_start = strtotime("$date 22:00:00");
+            $night_end = strtotime("$date 06:00:00 +1 day");
+
+            if ($time_in < $night_end) {
+                $night_hours += min($time_out, $night_end) - max($time_in, strtotime("$date 00:00:00"));
+            }
+            if ($time_out > $night_start) {
+                $night_hours += min($time_out, strtotime("$date 23:59:59")) - max($time_in, $night_start);
+            }
+            $night_hours = $night_hours / 3600; // Convert seconds to hours
+            $night_overtime_hours = max(0, $night_hours - 8);
+
+            // Update attendance with time-out, hours worked, and metrics
+            $update_sql = "
+                UPDATE attendance 
+                SET time_out = ?, hours_worked = ?, overtime_hours = ?, night_hours = ?, night_overtime_hours = ?, is_holiday = ?, is_special_event = ? 
+                WHERE employee_id = ? AND date = ?";
+            $update_stmt = $conn->prepare($update_sql);
+            $update_stmt->bind_param("sdddiiis", $time_now, $hours_worked, $overtime_hours, $night_hours, $night_overtime_hours, $is_holiday, $is_special_event, $user_id, $date);
+            $update_stmt->execute();
 
             $success_message = "Time-out logged successfully at $time_now!";
         } else {
@@ -72,8 +109,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get today's attendance record if exists
+// Mark absence if no time-in or time-out recorded by the end of the day
+date_default_timezone_set('Asia/Manila'); // Set timezone
+$current_hour = intval(date('H'));
 $today = date('Y-m-d');
+
+if ($current_hour >= 23 && empty($today_attendance)) {
+    $mark_absent_sql = "
+        INSERT INTO attendance (employee_id, date, is_absent) VALUES (?, ?, 1)
+        ON DUPLICATE KEY UPDATE is_absent = 1";
+    $mark_absent_stmt = $conn->prepare($mark_absent_sql);
+    $mark_absent_stmt->bind_param("is", $user_id, $today);
+    $mark_absent_stmt->execute();
+}
+
+// Get today's attendance record if exists
 $check_sql = "SELECT * FROM attendance WHERE employee_id = ? AND date = ?";
 $check_stmt = $conn->prepare($check_sql);
 $check_stmt->bind_param("is", $user_id, $today);
@@ -247,9 +297,8 @@ $recent_attendance = $recent_stmt->get_result();
                         </div>
                     </div>
                 </div>
-                
-                <!-- Recent Attendance History Card -->
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                 <!-- Recent Attendance History Card -->
+                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
                     <div class="bg-gray-50 p-4 border-b border-gray-100">
                         <h3 class="text-lg font-semibold text-gray-700">Recent Attendance History</h3>
                     </div>
@@ -262,50 +311,46 @@ $recent_attendance = $recent_stmt->get_result();
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours Worked</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime Hours</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Night Hours</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Holiday Hours</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <?php if ($recent_attendance->num_rows > 0): ?>
-                                        <?php while ($row = $recent_attendance->fetch_assoc()): ?>
-                                                <tr class="hover:bg-gray-50">
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <?php echo date('M d, Y (D)', strtotime($row['date'])); ?>
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <?php echo date('h:i A', strtotime($row['time_in'])); ?>
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <?php echo $row['time_out'] ? date('h:i A', strtotime($row['time_out'])) : '—'; ?>
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <?php
-                                                        if ($row['hours_worked']) {
-                                                            $hours = floor($row['hours_worked']);
-                                                            $minutes = round(($row['hours_worked'] - $hours) * 60);
-                                                            echo "$hours hrs $minutes mins";
-                                                        } else {
-                                                            echo "—";
-                                                        }
-                                                        ?>
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <?php if ($row['time_in'] && $row['time_out']): ?>
-                                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                                    Complete
-                                                                </span>
-                                                        <?php else: ?>
-                                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                                    Incomplete
-                                                                </span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                </tr>
-                                        <?php endwhile; ?>
-                                <?php else: ?>
-                                        <tr>
-                                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">No attendance records found</td>
+                                    <?php while ($row = $recent_attendance->fetch_assoc()): ?>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo date('M d, Y (D)', strtotime($row['date'])); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo $row['time_in'] ? date('h:i A', strtotime($row['time_in'])) : '—'; ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo $row['time_out'] ? date('h:i A', strtotime($row['time_out'])) : '—'; ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo $row['hours_worked'] ? number_format($row['hours_worked'], 2) . ' hrs' : '—'; ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo $row['overtime_hours'] ? number_format($row['overtime_hours'], 2) . ' hrs' : '—'; ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo $row['night_hours'] ? number_format($row['night_hours'], 2) . ' hrs' : '—'; ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo $row['holiday_hours'] ? number_format($row['holiday_hours'], 2) . ' hrs' : '—'; ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?php echo $row['is_absent'] ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Absent</span>' : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Present</span>'; ?>
+                                            </td>
                                         </tr>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">No attendance records found</td>
+                                    </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
