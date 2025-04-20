@@ -23,7 +23,7 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
         </div>
 
         <div class="flex justify-end mb-6">
-            <a href="../logout.php"
+            <a href="logout.php"
                 class="bg-red-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-red-700 transition">
                 Logout
             </a>

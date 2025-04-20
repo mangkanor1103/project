@@ -72,7 +72,7 @@ $system_health = ($conn->ping()) ? 100 : 0;
                 <div class="mt-4 md:mt-0 flex items-center space-x-3">
                     <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">Super
                         Admin</span>
-                    <a href="logout.php"
+                    <a id="logoutLink" href="logout.php"
                         class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition duration-200 shadow-sm hover:shadow">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20"
                             fill="currentColor">
@@ -271,5 +271,27 @@ $system_health = ($conn->ping()) ? 100 : 0;
         </form>
     </div>
 </div>
+
+<!-- Include SweetAlert2 via CDN if not already included -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.getElementById('logoutLink').addEventListener('click', function(event) {
+    event.preventDefault();
+    Swal.fire({
+        title: 'Are you sure you want to logout?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, logout!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'logout.php';
+        }
+    });
+});
+</script>
 
 <?php include '../components/footer.php'; ?>
