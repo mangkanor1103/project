@@ -19,7 +19,8 @@ $feedbacks = $result->fetch_all(MYSQLI_ASSOC);
 
 <div class="container mx-auto px-4 py-10">
     <!-- Back to Dashboard Button -->
-    <a href="superadmin.php" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition mb-6 inline-block">
+    <a href="superadmin.php"
+        class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition mb-6 inline-block">
         &larr; Back to Dashboard
     </a>
 
@@ -33,9 +34,12 @@ $feedbacks = $result->fetch_all(MYSQLI_ASSOC);
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created
+                        At</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -58,5 +62,3 @@ $feedbacks = $result->fetch_all(MYSQLI_ASSOC);
         </table>
     </div>
 </div>
-
-<?php include '../components/footer.php'; ?>

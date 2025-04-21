@@ -13,7 +13,7 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
 $password_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_password'])) {
     $current_password = $_POST['current_password'];
-    
+
     // Get admin's stored password hash
     $admin_id = $_SESSION['admin_id'];
     $query = "SELECT password FROM admins WHERE id = ?";
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_password'])) {
     $stmt->bind_param("i", $admin_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result && $row = $result->fetch_assoc()) {
         // Verify password
         if (password_verify($current_password, $row['password'])) {
@@ -169,9 +169,9 @@ $system_health = ($conn->ping()) ? 100 : 0;
                             </div>
                             <h3 class="ml-3 text-xl font-semibold text-gray-800">Manage HR</h3>
                         </div>
-                        <p class="text-gray-600 mb-6">View and manage HR-related tasks, including employee records and payroll.</p>
-                        <a href="hr.php"
-                            class="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium">
+                        <p class="text-gray-600 mb-6">View and manage HR-related tasks, including employee records and
+                            payroll.</p>
+                        <a href="hr.php" class="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium">
                             <span>Go to HR</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
@@ -226,8 +226,7 @@ $system_health = ($conn->ping()) ? 100 : 0;
                             <h3 class="ml-3 text-xl font-semibold text-gray-800">Update My Password</h3>
                         </div>
                         <p class="text-gray-600 mb-6">Change your account password to keep your account secure.</p>
-                        <button
-                            class="inline-flex items-center text-red-600 hover:text-red-700 font-medium"
+                        <button class="inline-flex items-center text-red-600 hover:text-red-700 font-medium"
                             onclick="document.getElementById('passwordVerifyModal').classList.remove('hidden')">
                             <span>Go to Password Update</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24"
@@ -244,29 +243,39 @@ $system_health = ($conn->ping()) ? 100 : 0;
 </div>
 
 <!-- Password Verification Modal -->
-<div id="passwordVerifyModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+<div id="passwordVerifyModal"
+    class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="border-b px-6 py-4">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-800">Verify Your Password</h3>
-                <button type="button" onclick="document.getElementById('passwordVerifyModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <button type="button" onclick="document.getElementById('passwordVerifyModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600">
                     <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        <path fill-rule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clip-rule="evenodd"></path>
                     </svg>
                 </button>
             </div>
         </div>
         <form method="POST" class="px-6 py-4">
             <div class="mb-4">
-                <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">Please enter your current password to continue</label>
-                <input type="password" name="current_password" id="current_password" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" required>
+                <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">Please enter your
+                    current password to continue</label>
+                <input type="password" name="current_password" id="current_password"
+                    class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    required>
                 <?php if (!empty($password_error)): ?>
                     <p class="text-red-600 text-sm mt-1"><?= $password_error ?></p>
                 <?php endif; ?>
             </div>
             <div class="flex justify-end mt-4">
-                <button type="button" onclick="document.getElementById('passwordVerifyModal').classList.add('hidden')" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md mr-2 hover:bg-gray-300 transition">Cancel</button>
-                <button type="submit" name="verify_password" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition">Verify & Continue</button>
+                <button type="button" onclick="document.getElementById('passwordVerifyModal').classList.add('hidden')"
+                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md mr-2 hover:bg-gray-300 transition">Cancel</button>
+                <button type="submit" name="verify_password"
+                    class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition">Verify &
+                    Continue</button>
             </div>
         </form>
     </div>
@@ -276,22 +285,22 @@ $system_health = ($conn->ping()) ? 100 : 0;
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-document.getElementById('logoutLink').addEventListener('click', function(event) {
-    event.preventDefault();
-    Swal.fire({
-        title: 'Are you sure you want to logout?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, logout!',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = 'logout.php';
-        }
+    document.getElementById('logoutLink').addEventListener('click', function (event) {
+        event.preventDefault();
+        Swal.fire({
+            title: 'Are you sure you want to logout?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, logout!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = 'logout.php';
+            }
+        });
     });
-});
 </script>
 
 <?php include '../components/footer.php'; ?>
