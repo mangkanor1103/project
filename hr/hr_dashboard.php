@@ -30,7 +30,7 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
         </div>
 
         <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
             <?php
             // Get employee count
             $employee_count = $conn->query("SELECT COUNT(*) as count FROM employees")->fetch_assoc()['count'];
@@ -40,6 +40,24 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
 
             // Get departments count
             $departments = $conn->query("SELECT COUNT(DISTINCT department) as count FROM employees")->fetch_assoc()['count'];
+            
+            // Get today's absent count (explicitly marked as absent + no records)
+            $today = date('Y-m-d');
+            $marked_absent = $conn->query("SELECT COUNT(*) as count FROM attendance 
+                                          WHERE date = '$today' AND is_absent = 1")->fetch_assoc()['count'];
+            
+            // Get employees without attendance records for today (considered absent)
+            $no_record_query = "SELECT COUNT(e.id) as count 
+                                FROM employees e 
+                                LEFT JOIN attendance a ON e.id = a.employee_id AND a.date = '$today'
+                                LEFT JOIN leave_requests lr ON e.id = lr.employee_id 
+                                   AND '$today' BETWEEN lr.start_date AND lr.end_date 
+                                   AND lr.status = 'Approved'
+                                WHERE a.id IS NULL AND lr.id IS NULL";
+            $no_record_count = $conn->query($no_record_query)->fetch_assoc()['count'];
+            
+            // Total absent count
+            $absent_count = $marked_absent + $no_record_count;
             ?>
 
             <!-- Employee Count -->
@@ -55,6 +73,24 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                     <div class="ml-4">
                         <h3 class="text-lg font-semibold text-gray-700">Total Employees</h3>
                         <p class="text-3xl font-bold text-blue-700"><?php echo $employee_count; ?></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Absent Today -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
+                <div class="flex items-center">
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-600" fill="none" 
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Absent Today</h3>
+                        <p class="text-3xl font-bold text-red-600"><?php echo $absent_count; ?></p>
+                        <p class="text-xs text-gray-500"><?php echo round(($absent_count / $employee_count) * 100, 1); ?>% of employees</p>
                     </div>
                 </div>
             </div>
@@ -84,7 +120,7 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" viewBox="0 0 20 20"
                             fill="currentColor">
                             <path
-                                d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                                d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 a1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
                         </svg>
                     </div>
                     <div class="ml-4">
@@ -245,6 +281,35 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                 </div>
             </div>
 
+            <!-- Expense Approval -->
+            <div
+                class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
+                <div class="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">Expense Approval</h2>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Review and approve employee expense reimbursement requests.</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-teal-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <a href="expenses.php"
+                            class="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-teal-700 hover:to-teal-800 transition-all flex items-center">
+                            <span>Manage Expenses</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- View Employees -->
             <div
                 class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
@@ -264,6 +329,93 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                         <a href="employee_list.php"
                             class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-gray-700 hover:to-gray-800 transition-all flex items-center">
                             <span>View Employees</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Payslips -->
+            <div
+                class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
+                <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">Manage Payslips</h2>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Generate and manage employee payslips for payroll processing.</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m2 5H7a2 2 0 01-2-2V7a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <a href="payslip.php"
+                            class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-red-700 hover:to-red-800 transition-all flex items-center">
+                            <span>Manage Payslips</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Departments -->
+            <div
+                class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
+                <div class="bg-gradient-to-r from-yellow-600 to-yellow-700 px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">Manage Departments</h2>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Add, update, and delete departments in the organization.</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-yellow-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </div>
+                        <a href="department.php"
+                            class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-yellow-700 hover:to-yellow-800 transition-all flex items-center">
+                            <span>Manage Departments</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Management - Fix broken HTML structure -->
+            <div
+                class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">Attendance Management</h2>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Manage employee attendance records, including adding, editing, and generating reports.</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-blue-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <a href="attendance.php"
+                            class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-blue-700 hover:to-blue-800 transition-all flex items-center">
+                            <span>Manage Attendance</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

@@ -44,6 +44,37 @@ $attendance_stmt->bind_param("is", $user_id, $like_date);
 $attendance_stmt->execute();
 $attendance = $attendance_stmt->get_result()->fetch_assoc();
 
+// Fetch approved expenses for this employee in the current month that should be reimbursed
+$expenses_sql = "
+    SELECT SUM(amount) AS total_reimbursement,
+           COUNT(*) AS expense_count
+    FROM expenses 
+    WHERE employee_id = ? 
+    AND (status = 'Approved' OR status = 'Reimbursed')
+    AND expense_date LIKE ?
+    AND reimbursed_date IS NULL";
+$expenses_stmt = $conn->prepare($expenses_sql);
+$expenses_stmt->bind_param("is", $user_id, $like_date);
+$expenses_stmt->execute();
+$expenses = $expenses_stmt->get_result()->fetch_assoc();
+
+// Get expense details for itemization
+$expense_details_sql = "
+    SELECT id, expense_type, amount, expense_date, status
+    FROM expenses 
+    WHERE employee_id = ? 
+    AND (status = 'Approved' OR status = 'Reimbursed')
+    AND expense_date LIKE ?
+    ORDER BY expense_date";
+$expense_details_stmt = $conn->prepare($expense_details_sql);
+$expense_details_stmt->bind_param("is", $user_id, $like_date);
+$expense_details_stmt->execute();
+$expense_details_result = $expense_details_stmt->get_result();
+
+// Get total approved expenses amount
+$reimbursement_amount = $expenses['total_reimbursement'] ?? 0;
+$expense_count = $expenses['expense_count'] ?? 0;
+
 // Initialize attendance data with default values if null
 $total_hours_worked = $attendance['total_hours_worked'] ?? 0;
 $total_overtime_hours = $attendance['total_overtime_hours'] ?? 0;
@@ -103,7 +134,7 @@ $total_seconds = round((($total_hours_worked - $total_hours) * 60 - $total_minut
 
 // Update the gross salary calculation to include all components
 $gross_salary = $regular_pay + $overtime_pay + $night_diff_pay + $night_ot_pay +
-    $holiday_pay + $restday_pay + $special_holiday_pay + $legal_holiday_pay;
+    $holiday_pay + $restday_pay + $special_holiday_pay + $legal_holiday_pay + $reimbursement_amount;
 
 // Deductions
 $sss = 525; // Fixed SSS contribution
@@ -302,6 +333,13 @@ $net_salary = $gross_salary - $total_deductions;
                             ₱<?php echo number_format($hourly_rate, 2); ?>
                         </div>
                         <div class="text-right text-red-600">-₱<?php echo number_format($hourly_rate * $late_hours, 2); ?></div>
+                    </div>
+
+                    <!-- Reimbursements -->
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Reimbursements</div>
+                        <div><?php echo $expense_count; ?> items</div>
+                        <div class="text-right text-green-600">₱<?php echo number_format($reimbursement_amount, 2); ?></div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4 pt-4 font-semibold">

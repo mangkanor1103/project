@@ -72,37 +72,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($attendance && $attendance['time_out'] === null) {
             $time_in = strtotime($attendance['time_in']);
             $time_out = strtotime($time_now);
-            $seconds_diff = $time_out - $time_in;
-            $hours_worked = $seconds_diff / 3600; // Convert seconds to hours
 
-            // Calculate overtime, night hours, and other metrics
-            $overtime_hours = max(0, $hours_worked - 8); // Overtime is any work beyond 8 hours
-            $night_hours = 0;
-            $night_overtime_hours = 0;
+            // Ensure time_out is after time_in
+            if ($time_out > $time_in) {
+                $seconds_diff = $time_out - $time_in;
+                $hours_worked = $seconds_diff / 3600; // Convert seconds to hours
 
-            // Check for night hours (10 PM to 6 AM)
-            $night_start = strtotime("$date 22:00:00");
-            $night_end = strtotime("$date 06:00:00 +1 day");
+                // Calculate overtime, night hours, and other metrics
+                $overtime_hours = max(0, $hours_worked - 8); // Overtime is any work beyond 8 hours
+                $night_hours = 0;
+                $night_overtime_hours = 0;
 
-            if ($time_in < $night_end) {
-                $night_hours += min($time_out, $night_end) - max($time_in, strtotime("$date 00:00:00"));
+                // Check for night hours (10 PM to 6 AM)
+                $night_start = strtotime("$date 22:00:00");
+                $night_end = strtotime("$date 06:00:00 +1 day");
+
+                if ($time_in < $night_end) {
+                    $night_hours += min($time_out, $night_end) - max($time_in, strtotime("$date 00:00:00"));
+                }
+                if ($time_out > $night_start) {
+                    $night_hours += min($time_out, strtotime("$date 23:59:59")) - max($time_in, $night_start);
+                }
+                $night_hours = $night_hours / 3600; // Convert seconds to hours
+                $night_overtime_hours = max(0, $night_hours - 8);
+
+                // Update attendance with time-out, hours worked, and metrics
+                $update_sql = "
+                    UPDATE attendance 
+                    SET time_out = ?, hours_worked = ?, overtime_hours = ?, night_hours = ?, night_overtime_hours = ?, is_holiday = ?, is_special_event = ? 
+                    WHERE employee_id = ? AND date = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param(
+                    "sdddiiiss", // Corrected type definition string
+                    $time_now, 
+                    $hours_worked, 
+                    $overtime_hours, 
+                    $night_hours, 
+                    $night_overtime_hours, 
+                    $is_holiday, 
+                    $is_special_event, 
+                    $user_id, 
+                    $date
+                );
+                $update_stmt->execute();
+
+                $success_message = "Time-out logged successfully at $time_now!";
+            } else {
+                $error_message = "Time-out cannot be earlier than time-in.";
             }
-            if ($time_out > $night_start) {
-                $night_hours += min($time_out, strtotime("$date 23:59:59")) - max($time_in, $night_start);
-            }
-            $night_hours = $night_hours / 3600; // Convert seconds to hours
-            $night_overtime_hours = max(0, $night_hours - 8);
-
-            // Update attendance with time-out, hours worked, and metrics
-            $update_sql = "
-                UPDATE attendance 
-                SET time_out = ?, hours_worked = ?, overtime_hours = ?, night_hours = ?, night_overtime_hours = ?, is_holiday = ?, is_special_event = ? 
-                WHERE employee_id = ? AND date = ?";
-            $update_stmt = $conn->prepare($update_sql);
-            $update_stmt->bind_param("sdddiiis", $time_now, $hours_worked, $overtime_hours, $night_hours, $night_overtime_hours, $is_holiday, $is_special_event, $user_id, $date);
-            $update_stmt->execute();
-
-            $success_message = "Time-out logged successfully at $time_now!";
         } else {
             $error_message = "You need to log your time-in first, or you have already logged your time-out.";
         }

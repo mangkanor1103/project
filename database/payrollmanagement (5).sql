@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 20, 2025 at 04:25 AM
+-- Generation Time: Apr 21, 2025 at 03:46 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -41,8 +41,9 @@ CREATE TABLE `admins` (
 --
 
 INSERT INTO `admins` (`id`, `username`, `password`, `role`, `created_at`, `updated_at`) VALUES
-(5, 'superadmin@gmail.com', '$2y$10$MweuAE2u2aCXVP8lI1Dzx.RtdDJAdr3f8bzg4/TAk12VY.tZqWclW', 'superadmin', '2025-04-19 05:49:36', '2025-04-19 05:49:36'),
-(6, 'admin@gmail.com', '$2y$10$H9YfOITw1cIyfLCTVSMs8.x6USDuU9oVhWPrB99ODChynqnlj.7E6', 'admin', '2025-04-19 05:59:26', '2025-04-19 05:59:35');
+(5, 'superadmin@gmail.com', '$2y$10$ZQ.088evUsprn/KVYNWV3eOVEUYrEj6CRrN5IrcUNGtAkE0k20Z.m', 'superadmin', '2025-04-19 05:49:36', '2025-04-20 06:09:46'),
+(6, 'admin@gmail.com', '$2y$10$H9YfOITw1cIyfLCTVSMs8.x6USDuU9oVhWPrB99ODChynqnlj.7E6', 'admin', '2025-04-19 05:59:26', '2025-04-19 05:59:35'),
+(7, 'admin1@gmail.com', '$2y$10$1E.V2MdbzSyEr3dwF8s2reUd9Cw1Rfn7t6yzdheQ7IMqqfYQn7M8C', 'admin', '2025-04-20 05:43:29', '2025-04-20 05:43:29');
 
 -- --------------------------------------------------------
 
@@ -97,7 +98,11 @@ INSERT INTO `attendance` (`id`, `employee_id`, `date`, `time_in`, `time_out`, `h
 (1, 8, '2025-04-19', '03:10:16', '03:10:20', NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
 (2, 8, '2025-04-20', '02:07:52', '02:08:54', 0.02, 0.00, 0.02, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
 (3, 10, '2025-04-20', '02:13:06', '02:52:08', 0.650556, 0.00, 0.65, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(4, 11, '2025-04-20', '03:00:18', '03:04:01', 0.0619444, 0.00, 0.06, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0);
+(4, 11, '2025-04-20', '03:00:18', '03:04:01', 0.0619444, 0.00, 0.06, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
+(5, 8, '2025-04-21', '11:51:40', NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1),
+(6, 11, '2025-04-21', '12:21:17', '12:24:22', 0.0513889, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1),
+(7, 7, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0),
+(8, 9, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -192,11 +197,41 @@ INSERT INTO `employees` (`id`, `full_name`, `dob`, `gender`, `contact_number`, `
 (4, 'Kian A. rodriguez', '2025-04-09', 'Male', '09234567654', 'rheamelchor@gmail.com', 'egegw', '488600066_1207743820874183_7935915282642254921_n.jpg', 'grgr', 'grdgrr', 'Regular', '2025-04-08', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 44.00, 1, '43', '3543', '35345', '2025-04-18 23:01:30', '$2y$10$Rtr74GKAe6J0Y2KayYAmd.TUL3V2DvYOZr7o0Sfai4ftCHWsfe04i'),
 (5, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:16:00', '$2y$10$wU/z2NSskO1gu81swDAxbecWIJqCpTwlXyjjhIjhCTnOlzuJsS9C.'),
 (6, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:16:09', '$2y$10$f/qmTo5aM3hvmFz3s2iyYuQ6rUh6LF.4FT4BB06vevdZ1Ghc9Te06'),
-(7, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:17:25', '$2y$10$wJI5.P.8eAI3S1k2xx2Jg.GYZIwZ9KiVCCAEKOT39hsiIZA1zJGe2'),
-(8, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'grdgrr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:10', '$2y$10$dE9WWPqojlW1sdb9asQlouWABPlNBaysnHtvdSvtHJ3sr9Fl.48Ky'),
-(9, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'grdgrr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:18', '$2y$10$ithgkMhmMFfLRNbfFzM0nOJ9bGfT326IVlDkMMiAgyg/FtWx6te1K'),
+(7, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'hr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:17:25', '$2y$10$wJI5.P.8eAI3S1k2xx2Jg.GYZIwZ9KiVCCAEKOT39hsiIZA1zJGe2'),
+(8, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:10', '$2y$10$dE9WWPqojlW1sdb9asQlouWABPlNBaysnHtvdSvtHJ3sr9Fl.48Ky'),
+(9, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:18', '$2y$10$ithgkMhmMFfLRNbfFzM0nOJ9bGfT326IVlDkMMiAgyg/FtWx6te1K'),
 (10, 'Rhea M. Melchor', '2025-04-15', 'Female', '09234567654', 'rheamelchor2@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'ChatGPT Image Apr 7, 2025, 08_16_06 PM.png', 'grgr', 'grdgrr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:12:26', '$2y$10$T6zN7.1Z.7PJ/g1NnC/gqOJ2MPlsLV98Uf8OZ0qNveIK0..vqe8zC'),
-(11, 'Rhea M. Melchor', '2025-05-07', 'Female', '09234567654', 'rheamelchor3@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', '488600066_1207743820874183_7935915282642254921_n.jpg', 'Manager', 'grdgrr', 'Regular', '2025-04-21', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:59:37', '$2y$10$eY7MopnTiZy7FsppJWu3QeEm7LiE3o9TEjho8nfPyqGTu1Wzx64Y.');
+(11, 'Rhea M. Melchor', '2025-05-07', 'Female', '09234567654', 'rheamelchor3@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', '488600066_1207743820874183_7935915282642254921_n.jpg', 'Manager', 'hr', 'Regular', '2025-04-21', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:59:37', '$2y$10$eY7MopnTiZy7FsppJWu3QeEm7LiE3o9TEjho8nfPyqGTu1Wzx64Y.');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expenses`
+--
+
+CREATE TABLE `expenses` (
+  `id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `expense_date` date NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `expense_type` varchar(50) NOT NULL,
+  `description` text NOT NULL,
+  `receipt_file` varchar(255) DEFAULT NULL,
+  `status` enum('Pending','Approved','Rejected','Reimbursed') NOT NULL DEFAULT 'Pending',
+  `approved_by` int(11) DEFAULT NULL,
+  `approved_date` datetime DEFAULT NULL,
+  `reimbursed_date` datetime DEFAULT NULL,
+  `rejection_reason` text DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `expenses`
+--
+
+INSERT INTO `expenses` (`id`, `employee_id`, `expense_date`, `amount`, `expense_type`, `description`, `receipt_file`, `status`, `approved_by`, `approved_date`, `reimbursed_date`, `rejection_reason`, `created_at`, `updated_at`) VALUES
+(1, 8, '2025-04-10', 23.00, 'Office Supplies', '3r2er23', 'receipt_680644446e090_20250421.png', 'Approved', 6, '2025-04-21 21:38:10', NULL, 'gdrrd', '2025-04-21 21:12:36', '2025-04-21 21:38:10');
 
 -- --------------------------------------------------------
 
@@ -299,7 +334,8 @@ ALTER TABLE `announcements`
 --
 ALTER TABLE `attendance`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `employee_id` (`employee_id`);
+  ADD KEY `idx_employee_date` (`employee_id`,`date`),
+  ADD KEY `idx_date` (`date`);
 
 --
 -- Indexes for table `bonuses`
@@ -325,7 +361,16 @@ ALTER TABLE `deductions`
 -- Indexes for table `employees`
 --
 ALTER TABLE `employees`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_department` (`department`);
+
+--
+-- Indexes for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `employee_id` (`employee_id`),
+  ADD KEY `status` (`status`);
 
 --
 -- Indexes for table `feedback`
@@ -338,7 +383,8 @@ ALTER TABLE `feedback`
 --
 ALTER TABLE `leave_requests`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `employee_id` (`employee_id`);
+  ADD KEY `idx_employee_dates` (`employee_id`,`start_date`,`end_date`),
+  ADD KEY `idx_status` (`status`);
 
 --
 -- Indexes for table `payroll`
@@ -355,7 +401,7 @@ ALTER TABLE `payroll`
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `announcements`
@@ -367,7 +413,7 @@ ALTER TABLE `announcements`
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `bonuses`
@@ -392,6 +438,12 @@ ALTER TABLE `deductions`
 --
 ALTER TABLE `employees`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `expenses`
+--
+ALTER TABLE `expenses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `feedback`
@@ -432,6 +484,12 @@ ALTER TABLE `bonuses`
 --
 ALTER TABLE `deductions`
   ADD CONSTRAINT `deductions_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`);
+
+--
+-- Constraints for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`);
 
 --
 -- Constraints for table `leave_requests`

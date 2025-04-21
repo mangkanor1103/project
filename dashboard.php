@@ -108,9 +108,9 @@ $is_default_password = password_verify("12345678", $employee['password']);
             </div>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- Updated Action Buttons section with Expenses button -->
         <h3 class="text-xl font-bold text-gray-800 mb-4 px-2">Quick Actions</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
             <!-- Payslip Button -->
             <div class="group">
                 <a href="payslip.php"
@@ -155,6 +155,22 @@ $is_default_password = password_verify("12345678", $employee['password']);
                     <div>
                         <span class="font-medium block">Request Leave</span>
                         <span class="text-xs text-amber-100">Time off & vacation</span>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Expense Reimbursement Button -->
+            <div class="group">
+                <a href="expenses.php"
+                    class="bg-gradient-to-br from-teal-500 to-teal-600 text-white px-6 py-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex items-center justify-center h-full group-hover:-translate-y-1 transform group-hover:shadow-teal-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <span class="font-medium block">Expenses</span>
+                        <span class="text-xs text-teal-100">Submit reimbursements</span>
                     </div>
                 </a>
             </div>
