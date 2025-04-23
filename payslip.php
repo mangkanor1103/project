@@ -11,9 +11,17 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
 // Define the current pay period (e.g., "April 2025")
 $current_period = date('F Y');
 
-// Fetch employee details
+// Fetch employee details including work preferences
 $user_id = $_SESSION['user_id'];
-$sql = "SELECT * FROM employees WHERE id = ?";
+$sql = "SELECT e.*, 
+               COALESCE(ep.work_days_per_month, 22) AS work_days_per_month,
+               COALESCE(ep.payment_frequency, 'Monthly') AS payment_frequency,
+               COALESCE(ep.pay_day_1, 30) AS pay_day_1,
+               COALESCE(ep.pay_day_2, 15) AS pay_day_2,
+               ep.weekend_workday
+        FROM employees e
+        LEFT JOIN employee_preferences ep ON e.id = ep.employee_id
+        WHERE e.id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -24,129 +32,351 @@ if (!$employee) {
     die("Employee record not found.");
 }
 
-// Fetch attendance details for the current month
+// Determine if this payslip is for the first half or second half of the month (for semi-monthly payments)
+$is_first_half = date('d') <= 15;
+$pay_period_text = "";
+
+if ($employee['payment_frequency'] == 'Semi-Monthly') {
+    if ($is_first_half) {
+        $pay_period_text = "1st - 15th " . date('F Y');
+    } else {
+        $pay_period_text = "16th - " . date('t') . " " . date('F Y');
+    }
+} else {
+    $pay_period_text = "1st - " . date('t') . " " . date('F Y'); 
+}
+
+// Fetch attendance details for the current month or pay period
 $current_month = date('Y-m');
-$attendance_sql = "
-    SELECT 
-        SUM(hours_worked) AS total_hours_worked,
-        SUM(overtime_hours) AS total_overtime_hours,
-        SUM(night_hours) AS total_night_hours,
-        SUM(night_overtime_hours) AS total_night_overtime_hours,
-        SUM(holiday_hours) AS total_holiday_hours,
-        SUM(restday_hours) AS total_restday_hours,
-        SUM(special_holiday_hours) AS total_special_holiday_hours,
-        SUM(legal_holiday_hours) AS total_legal_holiday_hours
-    FROM attendance 
-    WHERE employee_id = ? AND date LIKE ?";
-$attendance_stmt = $conn->prepare($attendance_sql);
-$like_date = $current_month . '%';
-$attendance_stmt->bind_param("is", $user_id, $like_date);
+
+if ($employee['payment_frequency'] == 'Semi-Monthly') {
+    if ($is_first_half) {
+        $start_date = date('Y-m-01');
+        $end_date = date('Y-m-15');
+    } else {
+        $start_date = date('Y-m-16');
+        $end_date = date('Y-m-t');
+    }
+    
+    // Count working days in the period (excluding weekends)
+    $working_days_in_period = 0;
+    $current_date = new DateTime($start_date);
+    $end_date_obj = new DateTime($end_date);
+    
+    while ($current_date <= $end_date_obj) {
+        $day_of_week = $current_date->format('w'); // 0 for Sunday, 6 for Saturday
+        
+        // For 22 days/month (standard weekday work schedule)
+        if ($employee['work_days_per_month'] == 22) {
+            if ($day_of_week != 0 && $day_of_week != 6) {
+                $working_days_in_period++;
+            }
+        } 
+        // For 26 days/month (includes weekend days)
+        else if ($employee['work_days_per_month'] == 26) {
+            if ($day_of_week != 0 && $day_of_week != 6) {
+                $working_days_in_period++; // Weekdays always count
+            } else {
+                // Add weekend day if it matches their preference
+                if (($day_of_week == 6 && ($employee['weekend_workday'] == 'Saturday' || $employee['weekend_workday'] == 'Both')) ||
+                    ($day_of_week == 0 && ($employee['weekend_workday'] == 'Sunday' || $employee['weekend_workday'] == 'Both'))) {
+                    $working_days_in_period++;
+                }
+            }
+        }
+        $current_date->modify('+1 day');
+    }
+    
+    // Get attendance records for the period
+    $attendance_sql = "
+        SELECT date, time_in, lunch_out, lunch_in, time_out, 
+            morning_hours, afternoon_hours, hours_worked, 
+            overtime_hours, night_hours, night_overtime_hours,
+            holiday_hours, restday_hours, special_holiday_hours, legal_holiday_hours
+        FROM attendance 
+        WHERE employee_id = ? AND date BETWEEN ? AND ?";
+        
+    $attendance_stmt = $conn->prepare($attendance_sql);
+    $attendance_stmt->bind_param("iss", $user_id, $start_date, $end_date);
+} else {
+    // For monthly payments, use the whole month
+    // Count working days in the month
+    $working_days_in_period = 0;
+    $days_in_month = date('t');
+    
+    for ($day = 1; $day <= $days_in_month; $day++) {
+        $date = date('Y-m') . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+        $day_of_week = date('w', strtotime($date)); // 0 for Sunday, 6 for Saturday
+        
+        // For 22 days/month
+        if ($employee['work_days_per_month'] == 22) {
+            if ($day_of_week != 0 && $day_of_week != 6) {
+                $working_days_in_period++;
+            }
+        } 
+        // For 26 days/month
+        else if ($employee['work_days_per_month'] == 26) {
+            if ($day_of_week != 0 && $day_of_week != 6) {
+                $working_days_in_period++; // Weekdays always count
+            } else {
+                // Add weekend day if it matches their preference
+                if (($day_of_week == 6 && ($employee['weekend_workday'] == 'Saturday' || $employee['weekend_workday'] == 'Both')) ||
+                    ($day_of_week == 0 && ($employee['weekend_workday'] == 'Sunday' || $employee['weekend_workday'] == 'Both'))) {
+                    $working_days_in_period++;
+                }
+            }
+        }
+    }
+    
+    // Get all attendance records for the month
+    $attendance_sql = "
+        SELECT date, time_in, lunch_out, lunch_in, time_out, 
+            morning_hours, afternoon_hours, hours_worked, 
+            overtime_hours, night_hours, night_overtime_hours,
+            holiday_hours, restday_hours, special_holiday_hours, legal_holiday_hours
+        FROM attendance 
+        WHERE employee_id = ? AND date LIKE ?";
+        
+    $attendance_stmt = $conn->prepare($attendance_sql);
+    $like_date = $current_month . '%';
+    $attendance_stmt->bind_param("is", $user_id, $like_date);
+}
+
 $attendance_stmt->execute();
-$attendance = $attendance_stmt->get_result()->fetch_assoc();
+$attendance_result = $attendance_stmt->get_result();
 
-// Fetch approved expenses for this employee in the current month that should be reimbursed
-$expenses_sql = "
-    SELECT SUM(amount) AS total_reimbursement,
-           COUNT(*) AS expense_count
-    FROM expenses 
-    WHERE employee_id = ? 
-    AND (status = 'Approved' OR status = 'Reimbursed')
-    AND expense_date LIKE ?
-    AND reimbursed_date IS NULL";
-$expenses_stmt = $conn->prepare($expenses_sql);
-$expenses_stmt->bind_param("is", $user_id, $like_date);
-$expenses_stmt->execute();
-$expenses = $expenses_stmt->get_result()->fetch_assoc();
+// Process attendance records
+$attendance_records = [];
+$days_present = 0;
+$total_hours_worked = 0;
+$total_overtime_hours = 0;
+$total_night_hours = 0;
+$total_night_overtime_hours = 0;
+$total_holiday_hours = 0;
+$total_restday_hours = 0;
+$total_special_holiday_hours = 0;
+$total_legal_holiday_hours = 0;
+$total_late_minutes = 0;
+$present_dates = []; // Track dates when employee was present
 
-// Get expense details for itemization
-$expense_details_sql = "
-    SELECT id, expense_type, amount, expense_date, status
-    FROM expenses 
-    WHERE employee_id = ? 
-    AND (status = 'Approved' OR status = 'Reimbursed')
-    AND expense_date LIKE ?
-    ORDER BY expense_date";
-$expense_details_stmt = $conn->prepare($expense_details_sql);
-$expense_details_stmt->bind_param("is", $user_id, $like_date);
-$expense_details_stmt->execute();
-$expense_details_result = $expense_details_stmt->get_result();
+while ($record = $attendance_result->fetch_assoc()) {
+    $attendance_records[$record['date']] = $record;
+    $present_dates[] = $record['date'];
+    $days_present++;
+    
+    // Add up hours based on morning and afternoon shifts
+    $morning_hours = $record['morning_hours'] ?? 0;
+    $afternoon_hours = $record['afternoon_hours'] ?? 0;
+    
+    // If morning_hours is not set but we have time_in and lunch_out, calculate it
+    if ($morning_hours == 0 && !empty($record['time_in']) && !empty($record['lunch_out'])) {
+        $time_in = strtotime($record['time_in']);
+        $lunch_out = strtotime($record['lunch_out']);
+        $morning_seconds = $lunch_out - $time_in;
+        $morning_hours = $morning_seconds / 3600;
+    }
+    
+    // If afternoon_hours is not set but we have lunch_in and time_out, calculate it
+    if ($afternoon_hours == 0 && !empty($record['lunch_in']) && !empty($record['time_out'])) {
+        $lunch_in = strtotime($record['lunch_in']);
+        $time_out = strtotime($record['time_out']);
+        $afternoon_seconds = $time_out - $lunch_in;
+        $afternoon_hours = $afternoon_seconds / 3600;
+    }
+    
+    // Calculate total working hours (morning + afternoon)
+    $hours_worked = $morning_hours + $afternoon_hours;
+    
+    // Update the record's hours worked with our calculated value
+    $record['hours_worked'] = $hours_worked;
+    $total_hours_worked += $hours_worked;
+    
+    // Calculate late minutes for morning check-in
+    if (!empty($record['time_in'])) {
+        $time_in = strtotime($record['time_in']);
+        $expected_time = strtotime($record['date'] . ' 08:00:00'); // 8 AM expected start time
+        
+        // Only calculate lateness if they arrived after the expected time
+        if ($time_in > $expected_time) {
+            $late_seconds = $time_in - $expected_time;
+            $late_minutes = $late_seconds / 60;
+            $total_late_minutes += $late_minutes;
+        }
+    }
+
+    // Calculate late minutes for afternoon check-in after lunch
+    if (!empty($record['lunch_in'])) {
+        $lunch_in = strtotime($record['lunch_in']);
+        $expected_return = strtotime($record['date'] . ' 13:00:00'); // 1 PM expected return time
+        
+        // Calculate lateness if they returned after 1 PM
+        if ($lunch_in > $expected_return) {
+            $late_afternoon_seconds = $lunch_in - $expected_return;
+            $late_afternoon_minutes = $late_afternoon_seconds / 60;
+            $total_late_minutes += $late_afternoon_minutes;
+        }
+    }
+    
+    // Add up other hours
+    $total_overtime_hours += $record['overtime_hours'] ?? 0;
+    $total_night_hours += $record['night_hours'] ?? 0;
+    $total_night_overtime_hours += $record['night_overtime_hours'] ?? 0;
+    $total_holiday_hours += $record['holiday_hours'] ?? 0;
+    $total_restday_hours += $record['restday_hours'] ?? 0;
+    $total_special_holiday_hours += $record['special_holiday_hours'] ?? 0;
+    $total_legal_holiday_hours += $record['legal_holiday_hours'] ?? 0;
+}
+
+// Calculate absences (working days they didn't show up)
+$absent_dates = [];
+$current_date = new DateTime($employee['payment_frequency'] == 'Semi-Monthly' ? $start_date : date('Y-m-01'));
+$end_date_obj = new DateTime($employee['payment_frequency'] == 'Semi-Monthly' ? $end_date : date('Y-m-t'));
+
+while ($current_date <= $end_date_obj) {
+    $current_date_str = $current_date->format('Y-m-d');
+    $day_of_week = $current_date->format('w'); // 0 for Sunday, 6 for Saturday
+    
+    $is_work_day = false;
+    
+    // For 22 days/month (standard weekday work schedule)
+    if ($employee['work_days_per_month'] == 22) {
+        if ($day_of_week != 0 && $day_of_week != 6) {
+            $is_work_day = true;
+        }
+    } 
+    // For 26 days/month (includes weekend days)
+    else if ($employee['work_days_per_month'] == 26) {
+        if ($day_of_week != 0 && $day_of_week != 6) {
+            $is_work_day = true;
+        } else {
+            // Count weekend day if it matches their preference
+            if (($day_of_week == 6 && ($employee['weekend_workday'] == 'Saturday' || $employee['weekend_workday'] == 'Both')) ||
+                ($day_of_week == 0 && ($employee['weekend_workday'] == 'Sunday' || $employee['weekend_workday'] == 'Both'))) {
+                $is_work_day = true;
+            }
+        }
+    }
+    
+    // If this is a work day and employee was not present, mark as absent
+    // Only mark as absent if no attendance record exists for this day
+    if ($is_work_day && !in_array($current_date_str, $present_dates)) {
+        $absent_dates[] = $current_date_str;
+    }
+    
+    $current_date->modify('+1 day');
+}
+
+$days_absent = count($absent_dates);
+
+// Salary calculations based on employee preferences
+$basic_salary = $employee['basic_salary']; // Monthly salary from DB
+
+// Calculate daily rate based on preferred work days
+$days_per_month = $employee['work_days_per_month']; // 22 or 26 days
+$daily_rate = $basic_salary / $days_per_month;
+
+// Calculate hourly rate (8 working hours per day: 4 morning + 4 afternoon)
+// For 8-5 workday with lunch break 12-1
+$hourly_rate = $daily_rate / 8; 
+
+// Calculate overtime and premium rates
+$overtime_rate = $hourly_rate * 1.25; // Overtime rate (25% premium)
+$night_diff_rate = $hourly_rate * 0.1; // Night differential (10% premium)
+$night_overtime_rate = $overtime_rate * 0.1; // Night differential on overtime (10% premium)
+$restday_premium_rate = $hourly_rate * 0.3; // Rest day premium (30%)
+$special_holiday_rate = $hourly_rate * 0.3; // Special holiday premium (30%)
+$legal_holiday_rate = $hourly_rate * 1.0; // Legal holiday premium (100%)
+
+// For absences, deduct the full daily rate
+$absence_deduction = $days_absent * $daily_rate;
+
+// Apply late deduction only for days when employee was present
+// Late deduction should NEVER be applied to absent days
+$late_deduction = ($total_late_minutes / 60) * $hourly_rate; // Convert minutes to hours
+
+// For semi-monthly payments, adjust the salary to half of monthly
+$salary_multiplier = ($employee['payment_frequency'] == 'Semi-Monthly') ? 0.5 : 1;
+$base_salary = $basic_salary * $salary_multiplier;
+
+// Regular pay calculation - base salary minus absence deduction
+$regular_pay = $base_salary - $absence_deduction;
+
+// Calculate premium pays
+$overtime_pay = $overtime_rate * $total_overtime_hours;
+$night_diff_pay = $night_diff_rate * $total_night_hours; 
+$night_ot_pay = $night_overtime_rate * $total_night_overtime_hours;
+$holiday_pay = $hourly_rate * $total_holiday_hours; // Regular pay is already included in base
+
+// For 26-day employees, calculate weekend rates based on preference
+$weekend_workday = $employee['weekend_workday'] ?? 'Saturday';
+if ($days_per_month == 26) {
+    if ($weekend_workday == 'Saturday') {
+        // Saturday is already in base pay for 26-day employees
+        $restday_pay = 0;
+    } else if ($weekend_workday == 'Sunday') {
+        // Sunday gets premium
+        $restday_pay = $restday_premium_rate * $total_restday_hours;
+    } else if ($weekend_workday == 'Both') {
+        // One day is in base, one gets premium - prorate based on actual rest day hours worked
+        // Assume a 50/50 split between Saturday and Sunday unless we track them separately
+        $restday_pay = ($restday_premium_rate * $total_restday_hours) / 2; 
+    } else {
+        // Default with no weekend day selected
+        $restday_pay = 0;
+    }
+} else {
+    // For 22-day employees, all weekend work gets rest day premium
+    $restday_pay = $restday_premium_rate * $total_restday_hours;
+}
+
+$special_holiday_pay = $special_holiday_rate * $total_special_holiday_hours;
+$legal_holiday_pay = $legal_holiday_rate * $total_legal_holiday_hours;
 
 // Get total approved expenses amount
 $reimbursement_amount = $expenses['total_reimbursement'] ?? 0;
 $expense_count = $expenses['expense_count'] ?? 0;
 
-// Initialize attendance data with default values if null
-$total_hours_worked = $attendance['total_hours_worked'] ?? 0;
-$total_overtime_hours = $attendance['total_overtime_hours'] ?? 0;
-$total_night_hours = $attendance['total_night_hours'] ?? 0;
-$total_night_overtime_hours = $attendance['total_night_overtime_hours'] ?? 0;
-$total_holiday_hours = $attendance['total_holiday_hours'] ?? 0;
-$total_restday_hours = $attendance['total_restday_hours'] ?? 0;
-$total_special_holiday_hours = $attendance['total_special_holiday_hours'] ?? 0;
-$total_legal_holiday_hours = $attendance['total_legal_holiday_hours'] ?? 0;
-
-// Fetch today's attendance details
-$today_date = date('Y-m-d');
-$today_attendance_sql = "SELECT time_in FROM attendance WHERE employee_id = ? AND date = ?";
-$today_attendance_stmt = $conn->prepare($today_attendance_sql);
-$today_attendance_stmt->bind_param("is", $user_id, $today_date);
-$today_attendance_stmt->execute();
-$today_attendance = $today_attendance_stmt->get_result()->fetch_assoc();
-
-$regular_start_time = strtotime('08:00:00'); // Regular start time
-$employee_time_in = strtotime($today_attendance['time_in'] ?? '08:00:00'); // Employee's actual time in
-
-// Calculate late time in hours
-$late_seconds = max(0, $employee_time_in - $regular_start_time);
-$late_hours = $late_seconds / 3600; // Convert seconds to hours
-
-// Deduct late hours from total hours worked
-$total_hours_worked -= $late_hours;
-if ($total_hours_worked < 0) {
-    $total_hours_worked = 0; // Ensure total hours worked is not negative
-}
-
-// Convert late time to hours, minutes, and seconds for display
-$late_hours_display = floor($late_hours);
-$late_minutes_display = floor(($late_hours - $late_hours_display) * 60);
-$late_seconds_display = round((($late_hours - $late_hours_display) * 60 - $late_minutes_display) * 60);
-
-// Salary calculations
-$basic_salary = $employee['basic_salary']; // Monthly salary from DB
-$basic_rate_per_day = $basic_salary / 22; // Daily rate
-$hourly_rate = $basic_rate_per_day / 8; // Hourly rate
-$overtime_rate = $hourly_rate * 1.25; // Overtime rate
-
-// Calculate pay components with hours, minutes, and seconds
-$regular_pay = $hourly_rate * $total_hours_worked;
-$overtime_pay = $overtime_rate * $total_overtime_hours;
-$night_diff_pay = $hourly_rate * 1.1 * $total_night_hours;
-$night_ot_pay = $overtime_rate * 1.1 * $total_night_overtime_hours;
-$holiday_pay = $hourly_rate * 2 * $total_holiday_hours;
-$restday_pay = $hourly_rate * 1.3 * $total_restday_hours;
-$special_holiday_pay = $hourly_rate * 1.3 * $total_special_holiday_hours;
-$legal_holiday_pay = $hourly_rate * 2 * $total_legal_holiday_hours;
-
-// Convert total hours worked into hours, minutes, and seconds
-$total_hours = floor($total_hours_worked);
-$total_minutes = floor(($total_hours_worked - $total_hours) * 60);
-$total_seconds = round((($total_hours_worked - $total_hours) * 60 - $total_minutes) * 60);
-
-// Update the gross salary calculation to include all components
-$gross_salary = $regular_pay + $overtime_pay + $night_diff_pay + $night_ot_pay +
-    $holiday_pay + $restday_pay + $special_holiday_pay + $legal_holiday_pay + $reimbursement_amount;
+// Final gross salary calculation
+// Regular pay already has absence deduction applied
+// Late deduction is applied separately
+$gross_salary = $regular_pay - $late_deduction + 
+                $overtime_pay + $night_diff_pay + $night_ot_pay +
+                $holiday_pay + $restday_pay + 
+                $special_holiday_pay + $legal_holiday_pay + 
+                $reimbursement_amount;
 
 // Deductions
-$sss = 525; // Fixed SSS contribution
-$philhealth = 250; // Fixed PhilHealth contribution
-$pagibig = 100; // Fixed Pag-IBIG contribution
+// SSS, PhilHealth, and Pag-IBIG contributions
+// These values should ideally be calculated based on government tables
+$sss = ($gross_salary > 20000) ? 900 : ($gross_salary > 10000 ? 525 : 300); // Example tiered SSS contribution
+$philhealth = min(max($gross_salary * 0.03, 100), 1800) / 2; // PhilHealth is 3% of salary, split between employer/employee
+$pagibig = min($gross_salary * 0.02, 100); // Pag-IBIG is 2% with ₱100 cap
+
+// Adjust deductions for semi-monthly payments
+if ($employee['payment_frequency'] == 'Semi-Monthly') {
+    if ($is_first_half) {
+        // First half of the month gets all contributions
+    } else {
+        // Second half of the month - no contributions
+        $sss = 0;
+        $philhealth = 0;
+        $pagibig = 0;
+    }
+}
+
 $total_deductions = $sss + $philhealth + $pagibig;
 
 // Calculate net salary
 $net_salary = $gross_salary - $total_deductions;
 
-?>
+// Display formats for hours
+$late_hours_display = floor($total_late_minutes / 60);
+$late_minutes_display = $total_late_minutes % 60;
 
+// Convert late minutes to hours, minutes format for display
+$total_hours = floor($total_hours_worked);
+$total_minutes = floor(($total_hours_worked - $total_hours) * 60);
+?>
 
 <?php include 'components/header.php'; ?>
 <main class="bg-gradient-to-br from-blue-50 to-gray-100 min-h-screen py-10">
@@ -154,7 +384,7 @@ $net_salary = $gross_salary - $total_deductions;
         <!-- Payslip Header -->
         <div class="flex flex-col items-center mb-6">
             <h1 class="text-3xl font-bold text-blue-700">Payslip</h1>
-            <p class="text-gray-600">Pay Period: <?php echo $current_period; ?></p>
+            <p class="text-gray-600">Pay Period: <?php echo $pay_period_text; ?></p>
         </div>
 
         <!-- Payslip Card -->
@@ -228,18 +458,36 @@ $net_salary = $gross_salary - $total_deductions;
                                 class="text-gray-800">Direct Deposit</span></p>
                         <p><span class="font-medium text-gray-600">Pay Date:</span> <span
                                 class="text-gray-800"><?php echo date('F d, Y'); ?></span></p>
+                        <p><span class="font-medium text-gray-600">Payment Frequency:</span> <span
+                                class="text-gray-800"><?php echo $employee['payment_frequency']; ?></span></p>
+                        <p><span class="font-medium text-gray-600">Work Schedule:</span> <span
+                                class="text-gray-800"><?php echo $employee['work_days_per_month']; ?> days/month</span></p>
+                        <?php if ($employee['work_days_per_month'] == 26 && !empty($employee['weekend_workday'])): ?>
+                        <p><span class="font-medium text-gray-600">Weekend Day:</span> <span
+                                class="text-gray-800"><?php echo $employee['weekend_workday']; ?></span></p>
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-6">
+                <div class="grid grid-cols-2 gap-6 mt-4">
                     <div>
                         <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Work Summary</h4>
+                        <p><span class="font-medium text-gray-600">Attendance:</span> 
+                            <span class="text-green-600"><?php echo $days_present; ?> days present</span> / 
+                            <span class="text-red-600"><?php echo $days_absent; ?> days absent</span>
+                        </p>
                         <p><span class="font-medium text-gray-600">Total Hours Worked:</span>
-                            <?php echo "$total_hours hrs $total_minutes mins $total_seconds secs"; ?>
+                            <?php echo "$total_hours hrs $total_minutes mins"; ?>
                         </p>
                         <p><span class="font-medium text-gray-600">Late Time:</span>
-                            <?php echo "$late_hours_display hrs $late_minutes_display mins $late_seconds_display secs"; ?>
+                            <?php echo "$late_hours_display hrs $late_minutes_display mins"; ?>
                         </p>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Rate Information</h4>
+                        <p><span class="font-medium text-gray-600">Daily Rate:</span> ₱<?php echo number_format($daily_rate, 2); ?></p>
+                        <p><span class="font-medium text-gray-600">Hourly Rate:</span> ₱<?php echo number_format($hourly_rate, 2); ?></p>
+                        <p><span class="font-medium text-gray-600">Overtime Rate:</span> ₱<?php echo number_format($overtime_rate, 2); ?></p>
                     </div>
                 </div>
             </div>
@@ -247,7 +495,6 @@ $net_salary = $gross_salary - $total_deductions;
             <!-- Salary Details -->
             <div class="p-8">
                 <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Earnings</h4>
-                <!-- Replace the earnings section with this updated version that shows all categories -->
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
                     <div class="grid grid-cols-3 gap-4 border-b border-gray-200 pb-4 mb-4">
                         <div class="font-medium text-gray-600">Description</div>
@@ -255,17 +502,36 @@ $net_salary = $gross_salary - $total_deductions;
                         <div class="font-medium text-gray-600 text-right">Amount</div>
                     </div>
 
-                    <!-- Regular Hours - Always show -->
+                    <!-- Regular Pay -->
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
-                        <div>Regular Hours</div>
-                        <div>
-                            <?php echo "$total_hours hrs $total_minutes mins $total_seconds secs"; ?> ×
-                            ₱<?php echo number_format($hourly_rate, 2); ?>
-                        </div>
-                        <div class="text-right">₱<?php echo number_format($regular_pay, 2); ?></div>
+                        <div>Regular Pay</div>
+                        <div>Base Salary</div>
+                        <div class="text-right">₱<?php echo number_format($base_salary, 2); ?></div>
                     </div>
 
-                    <!-- Overtime - Always show -->
+                    <!-- Absences Deduction -->
+                    <?php if ($days_absent > 0): ?>
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Absence Deduction</div>
+                        <div><?php echo $days_absent; ?> days × ₱<?php echo number_format($daily_rate, 2); ?></div>
+                        <div class="text-right text-red-600">-₱<?php echo number_format($absence_deduction, 2); ?></div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Late Deduction -->
+                    <?php if ($total_late_minutes > 0): ?>
+                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
+                        <div>Late Deduction</div>
+                        <div>
+                            <?php echo "$late_hours_display hrs $late_minutes_display mins"; ?> × 
+                            ₱<?php echo number_format($hourly_rate, 2); ?>
+                        </div>
+                        <div class="text-right text-red-600">-₱<?php echo number_format($late_deduction, 2); ?></div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Overtime -->
+                    <?php if ($total_overtime_hours > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Overtime</div>
                         <div>
@@ -274,73 +540,84 @@ $net_salary = $gross_salary - $total_deductions;
                         </div>
                         <div class="text-right">₱<?php echo number_format($overtime_pay, 2); ?></div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Night Differential - Always show -->
+                    <!-- Night Differential -->
+                    <?php if ($total_night_hours > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Night Differential</div>
                         <div>
                             <?php echo number_format($total_night_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate * 1.1, 2); ?>
+                            ₱<?php echo number_format($hourly_rate * 0.1, 2); ?> (10%)
                         </div>
                         <div class="text-right">₱<?php echo number_format($night_diff_pay, 2); ?></div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Night Overtime - Always show -->
+                    <!-- Night Overtime -->
+                    <?php if ($total_night_overtime_hours > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Night Overtime</div>
                         <div><?php echo number_format($total_night_overtime_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($overtime_rate * 1.1, 2); ?></div>
+                            ₱<?php echo number_format($overtime_rate * 0.1, 2); ?> (10%)</div>
                         <div class="text-right">₱<?php echo number_format($night_ot_pay, 2); ?></div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Holiday Hours - Always show -->
+                    <!-- Holiday Hours -->
+                    <?php if ($total_holiday_hours > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Holiday Hours</div>
                         <div><?php echo number_format($total_holiday_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate * 2, 2); ?></div>
+                            ₱<?php echo number_format($hourly_rate, 2); ?> (100%)</div>
                         <div class="text-right">₱<?php echo number_format($holiday_pay, 2); ?></div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Rest Day Hours - Always show -->
+                    <!-- Rest Day Hours -->
+                    <?php if ($total_restday_hours > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Rest Day Hours</div>
-                        <div><?php echo number_format($total_restday_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate * 1.3, 2); ?></div>
+                        <div>
+                            <?php echo number_format($total_restday_hours, 2); ?> hrs ×
+                            <?php if($days_per_month == 26 && $employee['weekend_workday'] == 'Saturday'): ?>
+                                ₱<?php echo number_format($hourly_rate, 2); ?> (Already in base)
+                            <?php else: ?>
+                                ₱<?php echo number_format($hourly_rate * 0.3, 2); ?> (30% Premium)
+                            <?php endif; ?>
+                        </div>
                         <div class="text-right">₱<?php echo number_format($restday_pay, 2); ?></div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Special Holiday - Always show -->
+                    <!-- Special Holiday -->
+                    <?php if ($total_special_holiday_hours > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Special Holiday</div>
                         <div><?php echo number_format($total_special_holiday_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate * 1.3, 2); ?></div>
+                            ₱<?php echo number_format($hourly_rate * 0.3, 2); ?> (30%)</div>
                         <div class="text-right">₱<?php echo number_format($special_holiday_pay, 2); ?></div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Legal Holiday - Always show -->
+                    <!-- Legal Holiday -->
+                    <?php if ($total_legal_holiday_hours > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Legal Holiday</div>
                         <div><?php echo number_format($total_legal_holiday_hours, 2); ?> hrs ×
-                            ₱<?php echo number_format($hourly_rate * 2, 2); ?></div>
+                            ₱<?php echo number_format($hourly_rate, 2); ?> (100%)</div>
                         <div class="text-right">₱<?php echo number_format($legal_holiday_pay, 2); ?></div>
                     </div>
-
-                    <!-- Late Deduction -->
-                    <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
-                        <div>Late Deduction</div>
-                        <div>
-                            <?php echo "$late_hours_display hrs $late_minutes_display mins $late_seconds_display secs"; ?> ×
-                            ₱<?php echo number_format($hourly_rate, 2); ?>
-                        </div>
-                        <div class="text-right text-red-600">-₱<?php echo number_format($hourly_rate * $late_hours, 2); ?></div>
-                    </div>
+                    <?php endif; ?>
 
                     <!-- Reimbursements -->
+                    <?php if ($reimbursement_amount > 0): ?>
                     <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                         <div>Reimbursements</div>
                         <div><?php echo $expense_count; ?> items</div>
                         <div class="text-right text-green-600">₱<?php echo number_format($reimbursement_amount, 2); ?></div>
                     </div>
+                    <?php endif; ?>
 
                     <div class="grid grid-cols-3 gap-4 pt-4 font-semibold">
                         <div class="col-span-2 text-right">Gross Earnings:</div>
@@ -351,18 +628,27 @@ $net_salary = $gross_salary - $total_deductions;
                 <!-- Deductions -->
                 <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Deductions</h4>
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <?php if ($sss > 0): ?>
                     <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
                         <span>SSS Contribution</span>
                         <span>₱<?php echo number_format($sss, 2); ?></span>
                     </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($philhealth > 0): ?>
                     <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
                         <span>PhilHealth</span>
                         <span>₱<?php echo number_format($philhealth, 2); ?></span>
                     </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($pagibig > 0): ?>
                     <div class="flex justify-between py-2 border-b border-gray-200 border-dashed">
                         <span>Pag-IBIG</span>
                         <span>₱<?php echo number_format($pagibig, 2); ?></span>
                     </div>
+                    <?php endif; ?>
+                    
                     <div class="flex justify-between pt-3 font-semibold">
                         <span>Total Deductions:</span>
                         <span class="text-red-600">₱<?php echo number_format($total_deductions, 2); ?></span>
@@ -370,7 +656,7 @@ $net_salary = $gross_salary - $total_deductions;
                 </div>
             </div>
 
-            <!-- After the deductions section, add a salary summary section -->
+            <!-- Salary summary section -->
             <div class="p-8 bg-gradient-to-r from-blue-50 to-blue-100">
                 <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Salary Summary</h4>
                 <div class="bg-white rounded-lg p-6 shadow-sm">
@@ -397,93 +683,59 @@ $net_salary = $gross_salary - $total_deductions;
                             </p>
                             <p class="text-sm mb-1"><span class="text-gray-600">Pay Date:</span>
                                 <?php echo date('F d, Y'); ?></p>
-                            <p class="text-sm"><span class="text-gray-600">Pay Period:</span>
-                                <?php echo $current_period; ?></p>
+                            <p class="text-sm mb-1"><span class="text-gray-600">Pay Period:</span>
+                                <?php echo $pay_period_text; ?></p>
+                            <p class="text-sm"><span class="text-gray-600">Daily Rate:</span>
+                                ₱<?php echo number_format($daily_rate, 2); ?> (<?php echo $days_per_month; ?>-day month)</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Replace the existing YTD section with this improved version -->
-            <div class="px-8 pb-8">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Year to Date Summary</h4>
-                <div class="bg-gray-50 rounded-lg p-4 shadow-sm border border-gray-100">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="p-3 bg-white rounded-lg shadow-sm">
-                            <div class="text-xs text-gray-500 mb-1">Gross YTD</div>
-                            <div class="text-lg font-bold text-gray-800">
-                                ₱<?php echo number_format($gross_salary * 12, 2); ?></div>
-                        </div>
-                        <div class="p-3 bg-white rounded-lg shadow-sm">
-                            <div class="text-xs text-gray-500 mb-1">Deductions YTD</div>
-                            <div class="text-lg font-bold text-red-600">
-                                ₱<?php echo number_format($total_deductions * 12, 2); ?></div>
-                        </div>
-                        <div class="p-3 bg-white rounded-lg shadow-sm">
-                            <div class="text-xs text-gray-500 mb-1">Net Income YTD</div>
-                            <div class="text-lg font-bold text-green-600">
-                                ₱<?php echo number_format(($gross_salary - $total_deductions) * 12, 2); ?></div>
-                        </div>
-                        <div class="p-3 bg-white rounded-lg shadow-sm">
-                            <div class="text-xs text-gray-500 mb-1">Total Hours YTD</div>
-                            <div class="text-lg font-bold text-blue-600">
-                                <?php echo number_format($total_hours_worked * 12, 2); ?>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Net Salary -->
+            <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 flex justify-between items-center">
+                <div>
+                    <h4 class="text-lg font-medium text-gray-800">Net Pay</h4>
                 </div>
+                <div class="text-3xl font-bold text-green-700">₱<?php echo number_format($net_salary, 2); ?></div>
             </div>
 
-            <!-- Space for tax breakdown if needed -->
+            <!-- Footer -->
+            <div class="px-8 py-4 text-center text-xs text-gray-500">
+                <p>This is an electronic payslip and is valid without signature.</p>
+                <p>For questions regarding this payslip, please contact HR department.</p>
+            </div>
         </div>
-    </div>
-    </div>
 
-    <!-- Net Salary -->
-    <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 flex justify-between items-center">
-        <div>
-            <h4 class="text-lg font-medium text-gray-800">Net Pay</h4>
+        <!-- Actions -->
+        <div class="flex justify-center mt-8 space-x-4">
+            <a href="dashboard.php"
+                class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+            </a>
+            <button onclick="printPayslip()"
+                class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2-2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print Payslip
+            </button>
+            <button onclick="downloadPDF()"
+                class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download PDF
+            </button>
         </div>
-        <div class="text-3xl font-bold text-green-700">₱<?php echo number_format($net_salary, 2); ?></div>
-    </div>
-
-
-    <!-- Footer -->
-    <div class="px-8 py-4 text-center text-xs text-gray-500">
-        <p>This is an electronic payslip and is valid without signature.</p>
-        <p>For questions regarding this payslip, please contact HR department.</p>
-    </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="flex justify-center mt-8 space-x-4">
-        <a href="dashboard.php"
-            class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Dashboard
-        </a>
-        <button onclick="printPayslip()"
-            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2-2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Print Payslip
-        </button>
-        <button onclick="downloadPDF()"
-            class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition transform hover:-translate-y-1 hover:shadow-lg flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download PDF
-        </button>
-    </div>
     </div>
 </main>
 

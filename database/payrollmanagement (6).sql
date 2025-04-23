@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 21, 2025 at 03:46 PM
+-- Generation Time: Apr 22, 2025 at 04:19 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -87,22 +87,34 @@ CREATE TABLE `attendance` (
   `legal_holiday_hours` decimal(5,2) DEFAULT 0.00,
   `is_absent` tinyint(1) DEFAULT 0,
   `is_holiday` tinyint(1) DEFAULT 0,
-  `is_special_event` tinyint(1) DEFAULT 0
+  `is_special_event` tinyint(1) DEFAULT 0,
+  `lunch_out` time DEFAULT NULL,
+  `lunch_in` time DEFAULT NULL,
+  `morning_hours` decimal(5,2) DEFAULT NULL,
+  `afternoon_hours` decimal(5,2) DEFAULT NULL,
+  `lunch_duration` decimal(5,2) DEFAULT NULL,
+  `overtime_in` time DEFAULT NULL,
+  `overtime_out` time DEFAULT NULL,
+  `is_overtime` tinyint(1) DEFAULT 0,
+  `is_night_diff` tinyint(1) DEFAULT 0,
+  `is_late` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `attendance`
 --
 
-INSERT INTO `attendance` (`id`, `employee_id`, `date`, `time_in`, `time_out`, `hours_worked`, `overtime_hours`, `night_hours`, `night_overtime_hours`, `holiday_hours`, `restday_hours`, `special_holiday_hours`, `legal_holiday_hours`, `is_absent`, `is_holiday`, `is_special_event`) VALUES
-(1, 8, '2025-04-19', '03:10:16', '03:10:20', NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(2, 8, '2025-04-20', '02:07:52', '02:08:54', 0.02, 0.00, 0.02, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(3, 10, '2025-04-20', '02:13:06', '02:52:08', 0.650556, 0.00, 0.65, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(4, 11, '2025-04-20', '03:00:18', '03:04:01', 0.0619444, 0.00, 0.06, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(5, 8, '2025-04-21', '11:51:40', NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1),
-(6, 11, '2025-04-21', '12:21:17', '12:24:22', 0.0513889, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1),
-(7, 7, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0),
-(8, 9, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0);
+INSERT INTO `attendance` (`id`, `employee_id`, `date`, `time_in`, `time_out`, `hours_worked`, `overtime_hours`, `night_hours`, `night_overtime_hours`, `holiday_hours`, `restday_hours`, `special_holiday_hours`, `legal_holiday_hours`, `is_absent`, `is_holiday`, `is_special_event`, `lunch_out`, `lunch_in`, `morning_hours`, `afternoon_hours`, `lunch_duration`, `overtime_in`, `overtime_out`, `is_overtime`, `is_night_diff`, `is_late`) VALUES
+(1, 8, '2025-04-19', '03:10:16', '03:10:20', NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(2, 8, '2025-04-20', '02:07:52', '02:08:54', 0.02, 0.00, 0.02, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(3, 10, '2025-04-20', '02:13:06', '02:52:08', 0.650556, 0.00, 0.65, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(4, 11, '2025-04-20', '03:00:18', '03:04:01', 0.0619444, 0.00, 0.06, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(5, 8, '2025-04-21', '11:51:40', NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(6, 11, '2025-04-21', '12:21:17', '12:24:22', 0.0513889, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(7, 7, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(8, 9, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(9, 8, '2025-04-22', '14:32:48', '14:53:17', 0.341389, 0.00, 0.34, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, '15:01:44', '15:01:48', 0.48, NULL, 0.00, NULL, NULL, 0, 0, 0),
+(10, 12, '2025-04-22', '15:36:07', '15:36:18', 0.000833333, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, '15:36:10', '15:36:15', 0.00, 0.00, 0.00, '16:04:06', NULL, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -201,7 +213,33 @@ INSERT INTO `employees` (`id`, `full_name`, `dob`, `gender`, `contact_number`, `
 (8, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:10', '$2y$10$dE9WWPqojlW1sdb9asQlouWABPlNBaysnHtvdSvtHJ3sr9Fl.48Ky'),
 (9, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:18', '$2y$10$ithgkMhmMFfLRNbfFzM0nOJ9bGfT326IVlDkMMiAgyg/FtWx6te1K'),
 (10, 'Rhea M. Melchor', '2025-04-15', 'Female', '09234567654', 'rheamelchor2@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'ChatGPT Image Apr 7, 2025, 08_16_06 PM.png', 'grgr', 'grdgrr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:12:26', '$2y$10$T6zN7.1Z.7PJ/g1NnC/gqOJ2MPlsLV98Uf8OZ0qNveIK0..vqe8zC'),
-(11, 'Rhea M. Melchor', '2025-05-07', 'Female', '09234567654', 'rheamelchor3@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', '488600066_1207743820874183_7935915282642254921_n.jpg', 'Manager', 'hr', 'Regular', '2025-04-21', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:59:37', '$2y$10$eY7MopnTiZy7FsppJWu3QeEm7LiE3o9TEjho8nfPyqGTu1Wzx64Y.');
+(11, 'Rhea M. Melchor', '2025-05-07', 'Female', '09234567654', 'rheamelchor3@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', '488600066_1207743820874183_7935915282642254921_n.jpg', 'Manager', 'hr', 'Regular', '2025-04-21', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:59:37', '$2y$10$eY7MopnTiZy7FsppJWu3QeEm7LiE3o9TEjho8nfPyqGTu1Wzx64Y.'),
+(12, 'Rhea M. Melchor', '2025-04-23', 'Female', '09234567654', 'rheamelchor5@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'kian.jpg.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-27', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 25000.00, 1, 'Kian A. rodriguez1', '3543', '09234567654', '2025-04-22 13:35:34', '$2y$10$ksWjrFQby9PzEkEsYRGyf.08jZeaDqteImyBqT3sivM7WosHDh0Ea');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employee_preferences`
+--
+
+CREATE TABLE `employee_preferences` (
+  `id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `work_days_per_month` int(11) DEFAULT 22 COMMENT '22 or 26 days per month',
+  `payment_frequency` varchar(20) DEFAULT 'Semi-Monthly' COMMENT 'Monthly or Semi-Monthly',
+  `pay_day_1` int(11) DEFAULT 15 COMMENT 'First payment day of month',
+  `pay_day_2` int(11) DEFAULT 30 COMMENT 'Second payment day (only for Semi-Monthly)',
+  `weekend_workday` varchar(10) DEFAULT NULL COMMENT 'Saturday, Sunday, or Both if 26 days selected',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `employee_preferences`
+--
+
+INSERT INTO `employee_preferences` (`id`, `employee_id`, `work_days_per_month`, `payment_frequency`, `pay_day_1`, `pay_day_2`, `weekend_workday`, `created_at`, `updated_at`) VALUES
+(1, 4, 22, 'Monthly', 15, NULL, NULL, '2025-04-22 12:25:43', '2025-04-22 12:26:39');
 
 -- --------------------------------------------------------
 
@@ -365,6 +403,13 @@ ALTER TABLE `employees`
   ADD KEY `idx_department` (`department`);
 
 --
+-- Indexes for table `employee_preferences`
+--
+ALTER TABLE `employee_preferences`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `employee_id` (`employee_id`);
+
+--
 -- Indexes for table `expenses`
 --
 ALTER TABLE `expenses`
@@ -413,7 +458,7 @@ ALTER TABLE `announcements`
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `bonuses`
@@ -437,7 +482,13 @@ ALTER TABLE `deductions`
 -- AUTO_INCREMENT for table `employees`
 --
 ALTER TABLE `employees`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT for table `employee_preferences`
+--
+ALTER TABLE `employee_preferences`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `expenses`
@@ -484,6 +535,12 @@ ALTER TABLE `bonuses`
 --
 ALTER TABLE `deductions`
   ADD CONSTRAINT `deductions_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`);
+
+--
+-- Constraints for table `employee_preferences`
+--
+ALTER TABLE `employee_preferences`
+  ADD CONSTRAINT `employee_preferences_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `expenses`

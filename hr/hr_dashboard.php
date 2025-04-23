@@ -425,6 +425,35 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                     </div>
                 </div>
             </div>
+
+            <!-- Employee Work Preferences -->
+            <div
+                class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
+                <div class="bg-gradient-to-r from-pink-600 to-pink-700 px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">Employee Work Preferences</h2>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Manage employee work day preferences and payroll schedules for the organization.</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-pink-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zM12 18v-6m4 0l-4-4-4 4" />
+                            </svg>
+                        </div>
+                        <a href="days.php"
+                            class="bg-gradient-to-r from-pink-600 to-pink-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-pink-700 hover:to-pink-800 transition-all flex items-center">
+                            <span>Manage Work Preferences</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </main>
