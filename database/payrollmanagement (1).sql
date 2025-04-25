@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 25, 2025 at 07:30 AM
+-- Generation Time: Apr 25, 2025 at 01:59 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,7 +43,41 @@ CREATE TABLE `admins` (
 INSERT INTO `admins` (`id`, `username`, `password`, `role`, `created_at`, `updated_at`) VALUES
 (5, 'superadmin@gmail.com', '$2y$10$ZQ.088evUsprn/KVYNWV3eOVEUYrEj6CRrN5IrcUNGtAkE0k20Z.m', 'superadmin', '2025-04-19 05:49:36', '2025-04-20 06:09:46'),
 (6, 'admin@gmail.com', '$2y$10$H9YfOITw1cIyfLCTVSMs8.x6USDuU9oVhWPrB99ODChynqnlj.7E6', 'admin', '2025-04-19 05:59:26', '2025-04-19 05:59:35'),
-(7, 'admin1@gmail.com', '$2y$10$1E.V2MdbzSyEr3dwF8s2reUd9Cw1Rfn7t6yzdheQ7IMqqfYQn7M8C', 'admin', '2025-04-20 05:43:29', '2025-04-20 05:43:29');
+(7, 'admin1@gmail.com', '$2y$10$1E.V2MdbzSyEr3dwF8s2reUd9Cw1Rfn7t6yzdheQ7IMqqfYQn7M8C', 'admin', '2025-04-20 05:43:29', '2025-04-20 05:43:29'),
+(9, 'test1@gmail.com', '$2y$10$G343BluFaKlFM4/13NIY..0ogNZ6GrHyqeWkPry54py9NDHJvss7W', 'admin', '2025-04-25 08:16:47', '2025-04-25 08:16:47');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admin_permissions`
+--
+
+CREATE TABLE `admin_permissions` (
+  `id` int(11) NOT NULL,
+  `admin_id` int(11) NOT NULL,
+  `permission` varchar(50) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `admin_permissions`
+--
+
+INSERT INTO `admin_permissions` (`id`, `admin_id`, `permission`, `created_at`) VALUES
+(14, 9, 'create_employee', '2025-04-25 08:23:37'),
+(15, 6, 'create_employee', '2025-04-25 08:25:10'),
+(16, 6, 'assign_manager', '2025-04-25 08:25:10'),
+(17, 6, 'leave_approval', '2025-04-25 08:25:10'),
+(18, 6, 'manage_announcements', '2025-04-25 08:25:10'),
+(19, 6, 'manage_calendar', '2025-04-25 08:25:10'),
+(20, 6, 'expense_approval', '2025-04-25 08:25:10'),
+(21, 6, 'view_employees', '2025-04-25 08:25:10'),
+(22, 6, 'manage_payslips', '2025-04-25 08:25:10'),
+(23, 6, 'manage_departments', '2025-04-25 08:25:10'),
+(24, 6, 'manage_attendance', '2025-04-25 08:25:10'),
+(25, 6, 'manage_job_positions', '2025-04-25 08:25:10'),
+(26, 6, 'manage_work_preferences', '2025-04-25 08:25:10'),
+(27, 6, 'system_settings', '2025-04-25 08:25:10');
 
 -- --------------------------------------------------------
 
@@ -250,6 +284,24 @@ INSERT INTO `employees` (`id`, `full_name`, `dob`, `gender`, `contact_number`, `
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `employee_preferences`
+--
+
+CREATE TABLE `employee_preferences` (
+  `id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `work_days_per_month` int(11) DEFAULT 22,
+  `payment_frequency` varchar(20) DEFAULT 'Semi-Monthly',
+  `pay_day_1` int(11) DEFAULT 15,
+  `pay_day_2` int(11) DEFAULT 30,
+  `weekend_workday` varchar(10) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `expenses`
 --
 
@@ -395,6 +447,13 @@ ALTER TABLE `admins`
   ADD UNIQUE KEY `username` (`username`);
 
 --
+-- Indexes for table `admin_permissions`
+--
+ALTER TABLE `admin_permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `admin_permission_unique` (`admin_id`,`permission`);
+
+--
 -- Indexes for table `admin_preferences`
 --
 ALTER TABLE `admin_preferences`
@@ -451,6 +510,13 @@ ALTER TABLE `employees`
   ADD KEY `idx_department` (`department`);
 
 --
+-- Indexes for table `employee_preferences`
+--
+ALTER TABLE `employee_preferences`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `employee_id` (`employee_id`);
+
+--
 -- Indexes for table `expenses`
 --
 ALTER TABLE `expenses`
@@ -494,7 +560,13 @@ ALTER TABLE `payroll`
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `admin_permissions`
+--
+ALTER TABLE `admin_permissions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `admin_preferences`
@@ -545,6 +617,12 @@ ALTER TABLE `employees`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
+-- AUTO_INCREMENT for table `employee_preferences`
+--
+ALTER TABLE `employee_preferences`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `expenses`
 --
 ALTER TABLE `expenses`
@@ -579,6 +657,12 @@ ALTER TABLE `payroll`
 --
 
 --
+-- Constraints for table `admin_permissions`
+--
+ALTER TABLE `admin_permissions`
+  ADD CONSTRAINT `admin_permissions_ibfk_1` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `attendance`
 --
 ALTER TABLE `attendance`
@@ -601,6 +685,12 @@ ALTER TABLE `deductions`
 --
 ALTER TABLE `departments`
   ADD CONSTRAINT `departments_ibfk_1` FOREIGN KEY (`manager_id`) REFERENCES `employees` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `employee_preferences`
+--
+ALTER TABLE `employee_preferences`
+  ADD CONSTRAINT `employee_preferences_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `expenses`
