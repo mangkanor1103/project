@@ -10,16 +10,25 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
     exit();
 }
 
-// Fetch distinct departments from the database
+// Fetch departments from the departments table
 $departments = [];
-$dept_query = "SELECT DISTINCT department FROM employees WHERE department != '' ORDER BY department";
+$dept_query = "SELECT id, name FROM departments ORDER BY name";
 $dept_result = $conn->query($dept_query);
 
 if ($dept_result && $dept_result->num_rows > 0) {
     while ($row = $dept_result->fetch_assoc()) {
-        if (!empty($row['department'])) {
-            $departments[] = $row['department'];
-        }
+        $departments[] = $row;
+    }
+}
+
+// Fetch job positions from the job_positions table
+$job_positions = [];
+$job_query = "SELECT id, position_name FROM job_positions ORDER BY position_name";
+$job_result = $conn->query($job_query);
+
+if ($job_result && $job_result->num_rows > 0) {
+    while ($row = $job_result->fetch_assoc()) {
+        $job_positions[] = $row;
     }
 }
 ?>
@@ -310,7 +319,14 @@ if ($dept_result && $dept_result->num_rows > 0) {
                     <div>
                         <label for="job_position" class="form-label">Job Position
                             <span class="text-red-500">*</span></label>
-                        <input type="text" id="job_position" name="job_position" class="form-input" required>
+                        <select id="job_position" name="job_position" class="form-select" required>
+                            <option value="">Select Job Position</option>
+                            <?php foreach ($job_positions as $position): ?>
+                                <option value="<?php echo htmlspecialchars($position['position_name']); ?>">
+                                    <?php echo htmlspecialchars($position['position_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div>
                         <label for="department" class="form-label">Department <span
@@ -318,16 +334,11 @@ if ($dept_result && $dept_result->num_rows > 0) {
                         <select id="department" name="department" class="form-select" required>
                             <option value="">Select Department</option>
                             <?php foreach ($departments as $dept): ?>
-                                <option value="<?php echo htmlspecialchars($dept); ?>">
-                                    <?php echo htmlspecialchars($dept); ?>
+                                <option value="<?php echo htmlspecialchars($dept['name']); ?>">
+                                    <?php echo htmlspecialchars($dept['name']); ?>
                                 </option>
                             <?php endforeach; ?>
-
                         </select>
-                        <div id="other_department_container" class="mt-2 hidden">
-                            <input type="text" id="other_department" name="other_department"
-                                placeholder="Enter new department name" class="form-input border-l-4 border-l-blue-500">
-                        </div>
                     </div>
                     <div>
                         <label for="employee_type" class="form-label">Employee Type
@@ -465,24 +476,6 @@ if ($dept_result && $dept_result->num_rows > 0) {
     </div>
 </main>
 <script>
-    // Show/hide the "Other" department input field with improved transition
-    document.getElementById('department').addEventListener('change', function () {
-        const otherContainer = document.getElementById('other_department_container');
-        const otherField = document.getElementById('other_department');
-
-        if (this.value === 'other') {
-            otherContainer.classList.remove('hidden');
-            setTimeout(() => {
-                otherField.focus();
-            }, 100);
-            otherField.setAttribute('required', 'required');
-        } else {
-            otherContainer.classList.add('hidden');
-            otherField.removeAttribute('required');
-            otherField.value = '';
-        }
-    });
-
     document.addEventListener('DOMContentLoaded', function () {
         // Apply classes to input elements
         document.querySelectorAll('input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="password"]')
