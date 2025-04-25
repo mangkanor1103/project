@@ -89,10 +89,10 @@ if ($employee['payment_frequency'] == 'Semi-Monthly') {
     
     // Get attendance records for the period
     $attendance_sql = "
-        SELECT date, time_in, lunch_out, lunch_in, time_out, 
-            morning_hours, afternoon_hours, hours_worked, 
+        SELECT date, time_in, time_out, hours_worked, 
             overtime_hours, night_hours, night_overtime_hours,
-            holiday_hours, restday_hours, special_holiday_hours, legal_holiday_hours
+            holiday_hours, restday_hours, special_holiday_hours, legal_holiday_hours,
+            late_minutes
         FROM attendance 
         WHERE employee_id = ? AND date BETWEEN ? AND ?";
         
@@ -130,10 +130,10 @@ if ($employee['payment_frequency'] == 'Semi-Monthly') {
     
     // Get all attendance records for the month
     $attendance_sql = "
-        SELECT date, time_in, lunch_out, lunch_in, time_out, 
-            morning_hours, afternoon_hours, hours_worked, 
+        SELECT date, time_in, time_out, hours_worked, 
             overtime_hours, night_hours, night_overtime_hours,
-            holiday_hours, restday_hours, special_holiday_hours, legal_holiday_hours
+            holiday_hours, restday_hours, special_holiday_hours, legal_holiday_hours,
+            late_minutes
         FROM attendance 
         WHERE employee_id = ? AND date LIKE ?";
         
@@ -165,57 +165,8 @@ while ($record = $attendance_result->fetch_assoc()) {
     $days_present++;
     
     // Add up hours based on morning and afternoon shifts
-    $morning_hours = $record['morning_hours'] ?? 0;
-    $afternoon_hours = $record['afternoon_hours'] ?? 0;
-    
-    // If morning_hours is not set but we have time_in and lunch_out, calculate it
-    if ($morning_hours == 0 && !empty($record['time_in']) && !empty($record['lunch_out'])) {
-        $time_in = strtotime($record['time_in']);
-        $lunch_out = strtotime($record['lunch_out']);
-        $morning_seconds = $lunch_out - $time_in;
-        $morning_hours = $morning_seconds / 3600;
-    }
-    
-    // If afternoon_hours is not set but we have lunch_in and time_out, calculate it
-    if ($afternoon_hours == 0 && !empty($record['lunch_in']) && !empty($record['time_out'])) {
-        $lunch_in = strtotime($record['lunch_in']);
-        $time_out = strtotime($record['time_out']);
-        $afternoon_seconds = $time_out - $lunch_in;
-        $afternoon_hours = $afternoon_seconds / 3600;
-    }
-    
-    // Calculate total working hours (morning + afternoon)
-    $hours_worked = $morning_hours + $afternoon_hours;
-    
-    // Update the record's hours worked with our calculated value
-    $record['hours_worked'] = $hours_worked;
+    $hours_worked = $record['hours_worked'] ?? 0;
     $total_hours_worked += $hours_worked;
-    
-    // Calculate late minutes for morning check-in
-    if (!empty($record['time_in'])) {
-        $time_in = strtotime($record['time_in']);
-        $expected_time = strtotime($record['date'] . ' 08:00:00'); // 8 AM expected start time
-        
-        // Only calculate lateness if they arrived after the expected time
-        if ($time_in > $expected_time) {
-            $late_seconds = $time_in - $expected_time;
-            $late_minutes = $late_seconds / 60;
-            $total_late_minutes += $late_minutes;
-        }
-    }
-
-    // Calculate late minutes for afternoon check-in after lunch
-    if (!empty($record['lunch_in'])) {
-        $lunch_in = strtotime($record['lunch_in']);
-        $expected_return = strtotime($record['date'] . ' 13:00:00'); // 1 PM expected return time
-        
-        // Calculate lateness if they returned after 1 PM
-        if ($lunch_in > $expected_return) {
-            $late_afternoon_seconds = $lunch_in - $expected_return;
-            $late_afternoon_minutes = $late_afternoon_seconds / 60;
-            $total_late_minutes += $late_afternoon_minutes;
-        }
-    }
     
     // Add up other hours
     $total_overtime_hours += $record['overtime_hours'] ?? 0;
@@ -225,6 +176,7 @@ while ($record = $attendance_result->fetch_assoc()) {
     $total_restday_hours += $record['restday_hours'] ?? 0;
     $total_special_holiday_hours += $record['special_holiday_hours'] ?? 0;
     $total_legal_holiday_hours += $record['legal_holiday_hours'] ?? 0;
+    $total_late_minutes += $record['late_minutes'] ?? 0;
 }
 
 // Calculate absences (working days they didn't show up)

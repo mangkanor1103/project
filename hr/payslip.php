@@ -12,20 +12,27 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
 
 // Define the current pay period (e.g., "April 2025")
 $current_period = date('F Y');
+$current_month = date('Y-m');
 
 // Fetch all employees
-$sql = "SELECT * FROM employees";
+$sql = "SELECT e.*, 
+         COALESCE(ep.work_days_per_month, 22) AS work_days_per_month,
+         COALESCE(ep.payment_frequency, 'Monthly') AS payment_frequency,
+         COALESCE(ep.pay_day_1, 30) AS pay_day_1,
+         COALESCE(ep.pay_day_2, 15) AS pay_day_2,
+         ep.weekend_workday
+      FROM employees e
+      LEFT JOIN employee_preferences ep ON e.id = ep.employee_id
+      ORDER BY e.full_name";
 $result = $conn->query($sql);
 
 if ($result->num_rows === 0) {
     die("No employees found.");
 }
 
-// Define the current month for attendance
-$current_month = date('Y-m');
+include '../components/header.php';
 ?>
 
-<?php include '../components/header.php'; ?>
 <main class="bg-gradient-to-br from-blue-50 to-gray-100 min-h-screen py-10">
     <div class="container mx-auto px-4 py-8 max-w-7xl">
         <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
@@ -40,15 +47,16 @@ $current_month = date('Y-m');
             <h1 class="text-3xl font-bold text-blue-700">All Employee Payslips</h1>
             <p class="text-gray-600">Pay Period: <?php echo $current_period; ?></p>
         </div>
+
         <!-- Back to Dashboard button -->
-<div class="fixed bottom-6 left-6">
-    <a href="hr_dashboard.php" class="bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Back to Dashboard
-    </a>
-</div>
+        <div class="fixed bottom-6 left-6">
+            <a href="hr_dashboard.php" class="bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
 
         <div class="flex justify-end mb-6">
             <button onclick="printAllPayslips()" class="bg-green-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-700 transition flex items-center">
@@ -63,6 +71,10 @@ $current_month = date('Y-m');
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <?php while ($employee = $result->fetch_assoc()): ?>
                 <?php
+                // Determine if this is first or second half of month
+                $current_day = date('d');
+                $is_first_half = $current_day <= 15;
+                
                 // Fetch attendance details for the current employee
                 $attendance_sql = "
                     SELECT 
@@ -75,8 +87,7 @@ $current_month = date('Y-m');
                         SUM(special_holiday_hours) AS total_special_holiday_hours,
                         SUM(legal_holiday_hours) AS total_legal_holiday_hours,
                         COUNT(DISTINCT date) AS days_present,
-                        SUM(is_late) AS days_late,
-                        SUM(late_minutes) AS total_late_minutes
+                        COALESCE(SUM(late_minutes), 0) AS total_late_minutes
                     FROM attendance 
                     WHERE employee_id = ? AND date LIKE ?";
                 $attendance_stmt = $conn->prepare($attendance_sql);
@@ -95,31 +106,16 @@ $current_month = date('Y-m');
                 $total_special_holiday_hours = $attendance['total_special_holiday_hours'] ?? 0;
                 $total_legal_holiday_hours = $attendance['total_legal_holiday_hours'] ?? 0;
                 $days_present = $attendance['days_present'] ?? 0;
-                $days_late = $attendance['days_late'] ?? 0;
                 $total_late_minutes = $attendance['total_late_minutes'] ?? 0;
+                
+                // Calculate days_late based on late_minutes 
+                $days_late = ($total_late_minutes > 0) ? 1 : 0;
 
-                // Fetch employee preferences
-                $pref_sql = "SELECT 
-                                COALESCE(work_days_per_month, 22) AS work_days_per_month, 
-                                COALESCE(payment_frequency, 'Semi-Monthly') AS payment_frequency,
-                                weekend_workday
-                            FROM employee_preferences 
-                            WHERE employee_id = ?";
-                $pref_stmt = $conn->prepare($pref_sql);
-                $pref_stmt->bind_param("i", $employee['id']);
-                $pref_stmt->execute();
-                $preferences = $pref_stmt->get_result()->fetch_assoc();
-                
-                // Set defaults if no preferences found
-                $work_days_per_month = $preferences ? $preferences['work_days_per_month'] : 22;
-                $payment_frequency = $preferences ? $preferences['payment_frequency'] : 'Semi-Monthly';
-                $weekend_workday = $preferences ? $preferences['weekend_workday'] : null;
-                
-                // Determine if this is first or second half of month (for Semi-Monthly payments)
-                $current_day = date('d');
-                $is_first_half = $current_day <= 15;
-                
                 // Calculate working days for the month or half-month
+                $work_days_per_month = $employee['work_days_per_month']; 
+                $payment_frequency = $employee['payment_frequency'];
+                $weekend_workday = $employee['weekend_workday'] ?? null;
+                
                 $total_working_days = $work_days_per_month;
                 if ($payment_frequency == 'Semi-Monthly') {
                     $total_working_days = $work_days_per_month / 2;
@@ -128,6 +124,37 @@ $current_month = date('Y-m');
                 // Calculate days absent (working days - days present)
                 $days_absent = $total_working_days - $days_present;
                 $days_absent = max(0, $days_absent); // Ensure no negative values
+                
+                // Correct calculation of daily rate from monthly salary
+                $basic_salary = $employee['basic_salary']; // Monthly salary from DB
+                $days_per_month = $work_days_per_month; // 22 or 26 days
+
+                // Proper formula: Monthly Salary ÷ Number of Working Days = Daily Rate
+                $daily_rate = $basic_salary / $days_per_month;
+
+                // Calculate hourly rate (8 working hours per day)
+                $hourly_rate = $daily_rate / 8;
+
+                // Calculate overtime and premium rates
+                $overtime_rate = $hourly_rate * 1.25; // Overtime rate (25% premium)
+                $night_diff_rate = $hourly_rate * 0.1; // Night differential (10% premium)
+                $night_overtime_rate = $overtime_rate * 0.1; // Night differential on overtime (10% premium)
+                $restday_premium_rate = $hourly_rate * 0.3; // Rest day premium (30%)
+                $special_holiday_rate = $hourly_rate * 0.3; // Special holiday premium (30%)
+                $legal_holiday_rate = $hourly_rate * 1.0; // Legal holiday premium (100%)
+
+                // Calculate late deduction
+                $late_deduction = ($total_late_minutes / 60) * $hourly_rate; // Convert minutes to hours
+
+                // For absences, deduct the full daily rate
+                $absence_deduction = $days_absent * $daily_rate;
+
+                // For semi-monthly payments, adjust the salary to half of monthly
+                $salary_multiplier = ($payment_frequency == 'Semi-Monthly') ? 0.5 : 1;
+                $base_salary = $basic_salary * $salary_multiplier;
+
+                // Regular pay calculation - base salary minus absence deduction
+                $regular_pay = $base_salary - $absence_deduction;
 
                 // Fetch approved expenses for this employee in the current month that should be reimbursed
                 $expenses_sql = "
@@ -146,48 +173,25 @@ $current_month = date('Y-m');
                 $reimbursement_amount = $expenses['total_reimbursement'] ?? 0;
                 $expense_count = $expenses['expense_count'] ?? 0;
 
-                // Salary calculations based on employee preferences
-                $basic_salary = $employee['basic_salary']; // Monthly salary
-
-                // For semi-monthly payments, adjust the salary to half of monthly
-                $salary_multiplier = ($payment_frequency == 'Semi-Monthly') ? 0.5 : 1;
-                $period_salary = $basic_salary * $salary_multiplier;
-
-                // Calculate daily rate based on preferred work days
-                $daily_rate = $basic_salary / $work_days_per_month;
-
-                // Calculate hourly rate (8 working hours per day)
-                $hourly_rate = $daily_rate / 8;
-
-                // Calculate overtime and premium rates
-                $overtime_rate = $hourly_rate * 1.25; // Overtime rate (25% premium)
-                $night_diff_rate = $hourly_rate * 0.1; // Night differential (10% premium)
-                $night_overtime_rate = $overtime_rate * 0.1; // Night differential on overtime
-                $restday_premium_rate = $hourly_rate * 0.3; // Rest day premium (30% premium)
-                $special_holiday_rate = $hourly_rate * 0.3; // Special holiday premium (30% premium)
-                $legal_holiday_rate = $hourly_rate * 1.0; // Legal holiday premium (100% premium)
-
-                // Calculate absences deduction (days absent * daily rate)
-                $absence_deduction = $days_absent * $daily_rate;
-
-                // Calculate late deduction (based on hourly rate)
-                $late_deduction = ($total_late_minutes / 60) * $hourly_rate;
-
-                // Calculate regular pay (base salary minus absences)
-                $regular_pay = $period_salary - $absence_deduction;
-
                 // Calculate premium pays
                 $overtime_pay = $overtime_rate * $total_overtime_hours;
-                $night_diff_pay = $night_diff_rate * $total_night_hours;
-                $night_ot_pay = ($overtime_rate + $night_overtime_rate) * $total_night_overtime_hours;
+                $night_diff_pay = $night_diff_rate * $total_night_hours; 
+                $night_ot_pay = $night_overtime_rate * $total_night_overtime_hours;
+                $holiday_pay = $hourly_rate * $total_holiday_hours;
 
                 // For 26-day employees, calculate weekend rates based on preference
-                if ($work_days_per_month == 26 && $weekend_workday) {
-                    if ($weekend_workday == 'Saturday' || $weekend_workday == 'Sunday') {
-                        // One weekend day is already in base pay for 26-day employees
+                if ($days_per_month == 26) {
+                    if ($weekend_workday == 'Saturday') {
+                        // Saturday is already in base pay for 26-day employees
                         $restday_pay = 0;
+                    } else if ($weekend_workday == 'Sunday') {
+                        // Sunday gets premium
+                        $restday_pay = $restday_premium_rate * $total_restday_hours;
                     } else if ($weekend_workday == 'Both') {
-                        // Both weekend days are in base pay
+                        // One day is in base, one gets premium - prorate based on actual rest day hours worked
+                        $restday_pay = ($restday_premium_rate * $total_restday_hours) / 2; 
+                    } else {
+                        // Default with no weekend day selected
                         $restday_pay = 0;
                     }
                 } else {
@@ -195,79 +199,118 @@ $current_month = date('Y-m');
                     $restday_pay = $restday_premium_rate * $total_restday_hours;
                 }
 
-                // Calculate holiday pays
                 $special_holiday_pay = $special_holiday_rate * $total_special_holiday_hours;
                 $legal_holiday_pay = $legal_holiday_rate * $total_legal_holiday_hours;
 
-                // Calculate gross salary
+                // Final gross salary calculation
                 $gross_salary = $regular_pay - $late_deduction + 
-                               $overtime_pay + $night_diff_pay + $night_ot_pay +
-                               $restday_pay + $special_holiday_pay + $legal_holiday_pay + 
-                               $reimbursement_amount;
+                              $overtime_pay + $night_diff_pay + $night_ot_pay +
+                              $holiday_pay + $restday_pay + 
+                              $special_holiday_pay + $legal_holiday_pay + 
+                              $reimbursement_amount;
 
-                // Deductions - SSS, PhilHealth, and Pag-IBIG
-                // Use tiered contributions based on salary brackets
-                $monthly_equivalent = $period_salary / $salary_multiplier; // Convert to monthly for brackets
-                
-                // SSS contribution (tiered)
-                if ($monthly_equivalent <= 10000) {
-                    $sss = 400 * $salary_multiplier;
-                } else if ($monthly_equivalent <= 20000) {
-                    $sss = 800 * $salary_multiplier;
-                } else {
-                    $sss = 1200 * $salary_multiplier;
+                // Deductions
+                $sss = ($gross_salary > 20000) ? 900 : ($gross_salary > 10000 ? 525 : 300);
+                $philhealth = min(max($gross_salary * 0.03, 100), 1800) / 2;
+                $pagibig = min($gross_salary * 0.02, 100);
+
+                // Adjust deductions for semi-monthly payments
+                if ($payment_frequency == 'Semi-Monthly') {
+                    if ($is_first_half) {
+                        // First half of the month gets all contributions
+                    } else {
+                        // Second half of the month - no contributions
+                        $sss = 0;
+                        $philhealth = 0;
+                        $pagibig = 0;
+                    }
                 }
-                
-                // PhilHealth (3% of monthly salary, split with employer)
-                $philhealth_rate = 0.03;
-                $philhealth = min(max($monthly_equivalent * $philhealth_rate / 2, 300), 1800) * $salary_multiplier;
-                
-                // Pag-IBIG (2% with cap)
-                $pagibig = min($monthly_equivalent * 0.02, 100) * $salary_multiplier;
-                
-                // Apply contributions only on first half for semi-monthly
-                if ($payment_frequency == 'Semi-Monthly' && !$is_first_half) {
-                    $sss = 0;
-                    $philhealth = 0;
-                    $pagibig = 0;
-                }
-                
+
                 $total_deductions = $sss + $philhealth + $pagibig;
 
                 // Calculate net salary
                 $net_salary = $gross_salary - $total_deductions;
+                
+                // Display formats for hours
+                $late_hours_display = floor($total_late_minutes / 60);
+                $late_minutes_display = $total_late_minutes % 60;
+                
+                // Convert hours to hours, minutes format for display
+                $total_hours = floor($total_hours_worked);
+                $total_minutes = floor(($total_hours_worked - $total_hours) * 60);
                 ?>
+
                 <!-- Payslip Card -->
                 <div class="bg-white shadow-lg rounded-lg border border-gray-200 overflow-hidden">
                     <div class="p-6">
                         <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($employee['full_name']); ?></h2>
                         <p class="text-sm text-gray-600"><?php echo htmlspecialchars($employee['job_position']); ?> • <?php echo htmlspecialchars($employee['department']); ?></p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            <?php echo $payment_frequency; ?> • 
-                            <?php echo $work_days_per_month; ?> days/month • 
-                            <?php echo $days_present; ?> days present
-                        </p>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                <?php echo $payment_frequency; ?>
+                            </span>
+                            <span class="bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs font-medium">
+                                <?php echo $work_days_per_month; ?> days/month
+                            </span>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-md text-xs font-medium">
+                                <?php echo $days_present; ?> days present
+                            </span>
+                            <?php if ($days_absent > 0): ?>
+                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded-md text-xs font-medium">
+                                <?php echo $days_absent; ?> days absent
+                            </span>
+                            <?php endif; ?>
+                        </div>
                     </div>
+                    
+                    <!-- Rate information section -->
+                    <div class="px-6 py-4 bg-blue-50 border-t border-b border-blue-100">
+                        <h4 class="text-sm font-semibold text-gray-600 mb-3">RATE INFORMATION</h4>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div>
+                                <span class="text-sm text-gray-500">Monthly Salary</span>
+                                <p class="font-semibold">₱<?php echo number_format($basic_salary, 2); ?></p>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="flex-1">
+                                    <span class="text-sm text-gray-500">Daily Rate</span>
+                                    <p class="font-semibold">₱<?php echo number_format($daily_rate, 2); ?></p>
+                                </div>
+                                <div class="text-xs text-gray-500 bg-blue-100 px-2 py-1 rounded">
+                                    ₱<?php echo number_format($basic_salary, 2); ?> ÷ <?php echo $days_per_month; ?> days
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-sm text-gray-500">Hourly Rate (8 hrs)</span>
+                                <p class="font-semibold">₱<?php echo number_format($hourly_rate, 2); ?></p>
+                            </div>
+                            <div>
+                                <span class="text-sm text-gray-500">OT Rate (×1.25)</span>
+                                <p class="font-semibold">₱<?php echo number_format($overtime_rate, 2); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="p-6 bg-gray-50">
-                        <p><strong>Period Salary:</strong> ₱<?php echo number_format($period_salary, 2); ?></p>
+                        <p><strong>Period Salary:</strong> ₱<?php echo number_format($base_salary, 2); ?></p>
                         
                         <?php if ($absence_deduction > 0): ?>
                             <p class="flex justify-between items-center mt-1">
-                                <span><strong>Absences (<?php echo $days_absent; ?> days):</strong></span>
+                                <span><strong>Absences (<?php echo $days_absent; ?> days × ₱<?php echo number_format($daily_rate, 2); ?>):</strong></span>
                                 <span class="text-red-600 font-medium">- ₱<?php echo number_format($absence_deduction, 2); ?></span>
                             </p>
                         <?php endif; ?>
                         
                         <?php if ($late_deduction > 0): ?>
                             <p class="flex justify-between items-center mt-1">
-                                <span><strong>Late (<?php echo $total_late_minutes; ?> mins):</strong></span>
+                                <span><strong>Late (<?php echo "$late_hours_display hrs $late_minutes_display mins"; ?> × ₱<?php echo number_format($hourly_rate, 2); ?>):</strong></span>
                                 <span class="text-red-600 font-medium">- ₱<?php echo number_format($late_deduction, 2); ?></span>
                             </p>
                         <?php endif; ?>
                         
                         <?php if ($overtime_pay > 0): ?>
                             <p class="flex justify-between items-center mt-1">
-                                <span><strong>Overtime (<?php echo number_format($total_overtime_hours, 2); ?> hrs):</strong></span>
+                                <span><strong>Overtime (<?php echo number_format($total_overtime_hours, 2); ?> hrs × ₱<?php echo number_format($overtime_rate, 2); ?>):</strong></span>
                                 <span class="text-green-600 font-medium">+ ₱<?php echo number_format($overtime_pay, 2); ?></span>
                             </p>
                         <?php endif; ?>
@@ -395,7 +438,6 @@ function printAllPayslips() {
         });
 }
 
-// Keep your existing functions here
 function viewPayslip(employeeId) {
     // Show loading state
     const modalContent = document.getElementById('modalContent');
@@ -446,9 +488,5 @@ function printPayslip() {
     setTimeout(function () {
         printWindow.print();
     }, 500);
-}
-
-function downloadPDF() {
-    alert("PDF download functionality requires a server-side PDF generation library.");
 }
 </script>
