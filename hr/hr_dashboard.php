@@ -40,12 +40,12 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
 
             // Get departments count
             $departments = $conn->query("SELECT COUNT(DISTINCT department) as count FROM employees")->fetch_assoc()['count'];
-            
+
             // Get today's absent count (explicitly marked as absent + no records)
             $today = date('Y-m-d');
             $marked_absent = $conn->query("SELECT COUNT(*) as count FROM attendance 
                                           WHERE date = '$today' AND is_absent = 1")->fetch_assoc()['count'];
-            
+
             // Get employees without attendance records for today (considered absent)
             $no_record_query = "SELECT COUNT(e.id) as count 
                                 FROM employees e 
@@ -55,7 +55,7 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                                    AND lr.status = 'Approved'
                                 WHERE a.id IS NULL AND lr.id IS NULL";
             $no_record_count = $conn->query($no_record_query)->fetch_assoc()['count'];
-            
+
             // Total absent count
             $absent_count = $marked_absent + $no_record_count;
             ?>
@@ -81,16 +81,18 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
             <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
                 <div class="flex items-center">
                     <div class="bg-red-100 p-3 rounded-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-600" fill="none" 
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-600" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                     <div class="ml-4">
                         <h3 class="text-lg font-semibold text-gray-700">Absent Today</h3>
                         <p class="text-3xl font-bold text-red-600"><?php echo $absent_count; ?></p>
-                        <p class="text-xs text-gray-500"><?php echo round(($absent_count / $employee_count) * 100, 1); ?>% of employees</p>
+                        <p class="text-xs text-gray-500">
+                            <?php echo round(($absent_count / $employee_count) * 100, 1); ?>% of employees
+                        </p>
                     </div>
                 </div>
             </div>
@@ -131,8 +133,8 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
             </div>
         </div>
 
-            <!-- Admin Actions -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <!-- Admin Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <!-- Create Employee -->
             <div
                 class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
@@ -230,7 +232,8 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                     <h2 class="text-xl font-bold text-white">Manage Announcements</h2>
                 </div>
                 <div class="p-6">
-                    <p class="text-gray-600 mb-6">Create and manage announcements for employees to view on the portal.</p>
+                    <p class="text-gray-600 mb-6">Create and manage announcements for employees to view on the portal.
+                    </p>
                     <div class="flex justify-between items-center">
                         <div class="text-indigo-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
@@ -259,7 +262,8 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                     <h2 class="text-xl font-bold text-white">Manage Calendar</h2>
                 </div>
                 <div class="p-6">
-                    <p class="text-gray-600 mb-6">Add and manage holidays and events for employees to view on the calendar.</p>
+                    <p class="text-gray-600 mb-6">Add and manage holidays and events for employees to view on the
+                        calendar.</p>
                     <div class="flex justify-between items-center">
                         <div class="text-teal-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
@@ -397,14 +401,15 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                 </div>
             </div>
 
-            <!-- Attendance Management - Fix broken HTML structure -->
+            <!-- Attendance Management -->
             <div
                 class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
                 <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                     <h2 class="text-xl font-bold text-white">Attendance Management</h2>
                 </div>
                 <div class="p-6">
-                    <p class="text-gray-600 mb-6">Manage employee attendance records, including adding, editing, and generating reports.</p>
+                    <p class="text-gray-600 mb-6">Manage employee attendance records, including adding, editing, and
+                        generating reports.</p>
                     <div class="flex justify-between items-center">
                         <div class="text-blue-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
@@ -426,6 +431,36 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                 </div>
             </div>
 
+            <!-- Job Position Management -->
+            <div
+                class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
+                <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">Manage Job Positions</h2>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Add, update, and manage job positions and employee role assignments.
+                    </p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-indigo-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <a href="job_position.php"
+                            class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-indigo-700 hover:to-indigo-800 transition-all flex items-center">
+                            <span>Manage Job Positions</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Employee Work Preferences -->
             <div
                 class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
@@ -433,7 +468,8 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                     <h2 class="text-xl font-bold text-white">Employee Work Preferences</h2>
                 </div>
                 <div class="p-6">
-                    <p class="text-gray-600 mb-6">Manage employee work day preferences and payroll schedules for the organization.</p>
+                    <p class="text-gray-600 mb-6">Manage employee work day preferences and payroll schedules for the
+                        organization.</p>
                     <div class="flex justify-between items-center">
                         <div class="text-pink-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
@@ -445,6 +481,37 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
                         <a href="days.php"
                             class="bg-gradient-to-r from-pink-600 to-pink-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-pink-700 hover:to-pink-800 transition-all flex items-center">
                             <span>Manage Work Preferences</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!-- System Settings -->
+            <div
+                class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 duration-200">
+                <div class="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">System Settings</h2>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Configure system settings, including company information, tax rates,
+                        and payroll parameters.</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-slate-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <a href="settings.php"
+                            class="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-2 rounded-lg shadow-md hover:from-slate-700 hover:to-slate-800 transition-all flex items-center">
+                            <span>System Settings</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

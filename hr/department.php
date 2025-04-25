@@ -10,118 +10,99 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
     exit();
 }
 
-// Define some sample departments if needed
-$sample_departments = [
-    'Human Resources' => 'Human Resources',
-    'Finance' => 'Finance',
-    'Marketing' => 'Marketing',
-    'Sales' => 'Sales',
-    'Operations' => 'Operations',
-    'Information Technology' => 'Information Technology',
-    'Customer Service' => 'Customer Service',
-    'Research and Development' => 'Research and Development'
-];
-
 // Handle department operations
 $success_message = "";
 $error_message = "";
 
-// Add new department (by assigning to employee)
+// Add new department
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_department'])) {
     $dept_name = trim($_POST['department_name']);
     $dept_description = trim($_POST['department_description']);
     $dept_manager_id = isset($_POST['department_manager']) ? intval($_POST['department_manager']) : null;
-    
+
     if (empty($dept_name)) {
         $error_message = "Department name cannot be empty.";
+    } elseif (empty($dept_manager_id)) {
+        $error_message = "Please select a manager for the department.";
     } else {
         // Check if department already exists
-        $check_sql = "SELECT COUNT(*) as count FROM employees WHERE department = ?";
+        $check_sql = "SELECT COUNT(*) as count FROM departments WHERE name = ?";
         $check_stmt = $conn->prepare($check_sql);
         $check_stmt->bind_param("s", $dept_name);
         $check_stmt->execute();
         $check_result = $check_stmt->get_result();
         $exists = $check_result->fetch_assoc()['count'] > 0;
-        
+
         if ($exists) {
             $error_message = "Department with this name already exists.";
         } else {
-            // If manager is selected, update their department
-            if ($dept_manager_id) {
-                $update_sql = "UPDATE employees SET department = ? WHERE id = ?";
-                $update_stmt = $conn->prepare($update_sql);
-                $update_stmt->bind_param("si", $dept_name, $dept_manager_id);
-                
-                if ($update_stmt->execute()) {
-                    $success_message = "New department '{$dept_name}' created and assigned to manager!";
-                } else {
-                    $error_message = "Failed to assign manager to department: " . $conn->error;
+            // Insert new department
+            $insert_sql = "INSERT INTO departments (name, description, manager_id) VALUES (?, ?, ?)";
+            $insert_stmt = $conn->prepare($insert_sql);
+            $insert_stmt->bind_param("ssi", $dept_name, $dept_description, $dept_manager_id);
+
+            if ($insert_stmt->execute()) {
+                // If manager is selected, update their department
+                if ($dept_manager_id) {
+                    $update_sql = "UPDATE employees SET department = ? WHERE id = ?";
+                    $update_stmt = $conn->prepare($update_sql);
+                    $update_stmt->bind_param("si", $dept_name, $dept_manager_id);
+                    $update_stmt->execute();
                 }
+
+                $success_message = "New department '{$dept_name}' created successfully!";
             } else {
-                $success_message = "New department '{$dept_name}' has been created. Assign employees to it using the Assign tab.";
+                $error_message = "Failed to create department: " . $conn->error;
             }
         }
     }
 }
 
-// Update department name
+// Update department
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_department'])) {
-    $old_dept_name = trim($_POST['old_department_name']);
-    $new_dept_name = trim($_POST['department_name']);
+    $dept_id = intval($_POST['department_id']);
+    $dept_name = trim($_POST['department_name']);
+    $dept_description = trim($_POST['department_description']);
     $dept_manager_id = isset($_POST['department_manager']) ? intval($_POST['department_manager']) : null;
-    
-    if (empty($new_dept_name)) {
+    $old_dept_name = trim($_POST['old_department_name']);
+
+    if (empty($dept_name)) {
         $error_message = "Department name cannot be empty.";
-    } else if ($old_dept_name === $new_dept_name) {
-        // Just update the manager
-        if ($dept_manager_id) {
-            // First remove any existing manager's designation
-            $check_manager_sql = "SELECT id FROM employees WHERE job_position IN ('Manager', 'Senior Manager', 'Director', 'Executive') AND department = ?";
-            $check_manager_stmt = $conn->prepare($check_manager_sql);
-            $check_manager_stmt->bind_param("s", $old_dept_name);
-            $check_manager_stmt->execute();
-            $manager_result = $check_manager_stmt->get_result();
-            
-            // Update the new manager's department
-            $update_manager_sql = "UPDATE employees SET department = ? WHERE id = ?";
-            $update_manager_stmt = $conn->prepare($update_manager_sql);
-            $update_manager_stmt->bind_param("si", $new_dept_name, $dept_manager_id);
-            
-            if ($update_manager_stmt->execute()) {
-                $success_message = "Department manager updated successfully!";
-            } else {
-                $error_message = "Failed to update department manager: " . $conn->error;
-            }
-        } else {
-            $success_message = "No changes were made.";
-        }
     } else {
-        // Check if the new department name already exists
-        $check_sql = "SELECT COUNT(*) as count FROM employees WHERE department = ? AND department != ?";
+        // Check if department name exists (excluding current department)
+        $check_sql = "SELECT COUNT(*) as count FROM departments WHERE name = ? AND id != ?";
         $check_stmt = $conn->prepare($check_sql);
-        $check_stmt->bind_param("ss", $new_dept_name, $old_dept_name);
+        $check_stmt->bind_param("si", $dept_name, $dept_id);
         $check_stmt->execute();
         $check_result = $check_stmt->get_result();
         $exists = $check_result->fetch_assoc()['count'] > 0;
-        
+
         if ($exists) {
             $error_message = "Department with this name already exists.";
         } else {
-            // Update all employees in this department
-            $update_sql = "UPDATE employees SET department = ? WHERE department = ?";
+            // Update department
+            $update_sql = "UPDATE departments SET name = ?, description = ?, manager_id = ? WHERE id = ?";
             $update_stmt = $conn->prepare($update_sql);
-            $update_stmt->bind_param("ss", $new_dept_name, $old_dept_name);
-            
+            $update_stmt->bind_param("ssii", $dept_name, $dept_description, $dept_manager_id, $dept_id);
+
             if ($update_stmt->execute()) {
-                // If a manager is specified, ensure they're in the department
+                // Update all employees with old department name
+                if ($old_dept_name !== $dept_name) {
+                    $update_emp_sql = "UPDATE employees SET department = ? WHERE department = ?";
+                    $update_emp_stmt = $conn->prepare($update_emp_sql);
+                    $update_emp_stmt->bind_param("ss", $dept_name, $old_dept_name);
+                    $update_emp_stmt->execute();
+                }
+
+                // If manager is selected, update their department
                 if ($dept_manager_id) {
                     $update_manager_sql = "UPDATE employees SET department = ? WHERE id = ?";
                     $update_manager_stmt = $conn->prepare($update_manager_sql);
-                    $update_manager_stmt->bind_param("si", $new_dept_name, $dept_manager_id);
+                    $update_manager_stmt->bind_param("si", $dept_name, $dept_manager_id);
                     $update_manager_stmt->execute();
                 }
-                
-                $success_message = "Department updated from '{$old_dept_name}' to '{$new_dept_name}' successfully!";
+
+                $success_message = "Department '{$dept_name}' updated successfully!";
             } else {
                 $error_message = "Failed to update department: " . $conn->error;
             }
@@ -129,11 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_department']))
     }
 }
 
-// Delete department (by reassigning employees)
+// Delete department
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_department'])) {
+    $dept_id = intval($_POST['department_id']);
     $dept_name = trim($_POST['department_name']);
-    $reassign_to = isset($_POST['reassign_to']) && !empty($_POST['reassign_to']) ? trim($_POST['reassign_to']) : '';
-    
+    $reassign_to = isset($_POST['reassign_to']) && !empty($_POST['reassign_to']) ? trim($_POST['reassign_to']) : null;
+
     // Count employees in this department
     $count_sql = "SELECT COUNT(*) as count FROM employees WHERE department = ?";
     $count_stmt = $conn->prepare($count_sql);
@@ -141,13 +123,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_department']))
     $count_stmt->execute();
     $count_result = $count_stmt->get_result();
     $emp_count = $count_result->fetch_assoc()['count'];
-    
+
     if ($emp_count > 0 && empty($reassign_to)) {
         $error_message = "Cannot delete department with {$emp_count} employees. Please specify a department to reassign them to.";
     } else {
         // Begin transaction
         $conn->begin_transaction();
-        
+
         try {
             if ($emp_count > 0) {
                 // Reassign employees to new department
@@ -156,10 +138,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_department']))
                 $reassign_stmt->bind_param("ss", $reassign_to, $dept_name);
                 $reassign_stmt->execute();
             }
-            
+
+            // Delete department
+            $delete_sql = "DELETE FROM departments WHERE id = ?";
+            $delete_stmt = $conn->prepare($delete_sql);
+            $delete_stmt->bind_param("i", $dept_id);
+            $delete_stmt->execute();
+
             $conn->commit();
-            $success_message = "Department '{$dept_name}' deleted successfully! " . 
-                              ($emp_count > 0 ? "{$emp_count} employees have been reassigned to '{$reassign_to}'." : "");
+            $success_message = "Department '{$dept_name}' deleted successfully! " .
+                ($emp_count > 0 ? "{$emp_count} employees have been reassigned to '{$reassign_to}'." : "");
         } catch (Exception $e) {
             $conn->rollback();
             $error_message = "Error deleting department: " . $e->getMessage();
@@ -171,18 +159,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_department']))
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_employees'])) {
     $dept_name = trim($_POST['department_name']);
     $employee_ids = isset($_POST['employee_ids']) ? $_POST['employee_ids'] : [];
-    
+
     if (empty($employee_ids)) {
         $error_message = "No employees selected for assignment.";
     } else {
         // Begin transaction
         $conn->begin_transaction();
-        
+
         try {
             // Update each employee's department
             $update_sql = "UPDATE employees SET department = ? WHERE id = ?";
             $update_stmt = $conn->prepare($update_sql);
-            
+
             $success_count = 0;
             foreach ($employee_ids as $emp_id) {
                 $update_stmt->bind_param("si", $dept_name, $emp_id);
@@ -190,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_employees'])) 
                     $success_count++;
                 }
             }
-            
+
             // Commit transaction
             $conn->commit();
             $success_message = "{$success_count} employees assigned to '{$dept_name}' successfully!";
@@ -202,35 +190,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_employees'])) 
     }
 }
 
-// Get unique departments from employees table
+// Fetch all departments with manager and employee count
 $departments = [];
-$dept_sql = "SELECT DISTINCT department FROM employees WHERE department IS NOT NULL AND department != '' ORDER BY department";
+$dept_sql = "SELECT d.id, d.name, d.description, d.manager_id, 
+            e.full_name as manager_name, e.job_position as manager_position,
+            (SELECT COUNT(*) FROM employees WHERE department = d.name) as employee_count
+            FROM departments d
+            LEFT JOIN employees e ON d.manager_id = e.id
+            ORDER BY d.name";
 $dept_result = $conn->query($dept_sql);
 
 if ($dept_result && $dept_result->num_rows > 0) {
     while ($row = $dept_result->fetch_assoc()) {
-        $dept_name = $row['department'];
-        
-        // Get employee count for this department
-        $count_sql = "SELECT COUNT(*) as count FROM employees WHERE department = ?";
-        $count_stmt = $conn->prepare($count_sql);
-        $count_stmt->bind_param("s", $dept_name);
-        $count_stmt->execute();
-        $count = $count_stmt->get_result()->fetch_assoc()['count'];
-        
-        // Get department manager (assuming first employee with manager position)
-        $manager_sql = "SELECT id, full_name FROM employees WHERE department = ? AND job_position IN ('Manager', 'Senior Manager', 'Director', 'Executive') LIMIT 1";
-        $manager_stmt = $conn->prepare($manager_sql);
-        $manager_stmt->bind_param("s", $dept_name);
-        $manager_stmt->execute();
-        $manager_result = $manager_stmt->get_result();
-        $manager = $manager_result->num_rows > 0 ? $manager_result->fetch_assoc() : null;
-        
         $departments[] = [
-            'department_name' => $dept_name,
-            'manager_id' => $manager ? $manager['id'] : null,
-            'manager_name' => $manager ? $manager['full_name'] : null,
-            'employee_count' => $count
+            'id' => $row['id'],
+            'department_name' => $row['name'],
+            'description' => $row['description'],
+            'manager_id' => $row['manager_id'],
+            'manager_name' => $row['manager_name'],
+            'manager_position' => $row['manager_position'],
+            'employee_count' => $row['employee_count']
         ];
     }
 }
@@ -244,16 +223,6 @@ $manager_result = $conn->query($manager_sql);
 if ($manager_result && $manager_result->num_rows > 0) {
     while ($row = $manager_result->fetch_assoc()) {
         $managers[] = $row;
-    }
-}
-
-// Fetch employees not assigned to any department
-$unassigned_employees = [];
-$unassigned_sql = "SELECT id, full_name, job_position FROM employees WHERE department IS NULL OR department = '' ORDER BY full_name";
-$unassigned_result = $conn->query($unassigned_sql);
-if ($unassigned_result && $unassigned_result->num_rows > 0) {
-    while ($row = $unassigned_result->fetch_assoc()) {
-        $unassigned_employees[] = $row;
     }
 }
 ?>
@@ -289,38 +258,48 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
         <!-- Department Management Tabs -->
         <div class="mb-6">
             <div class="flex border-b border-gray-200">
-                <button onclick="showTab('add')" class="tab-button px-6 py-3 text-yellow-600 border-b-2 border-yellow-600 font-medium">Add Department</button>
-                <button onclick="showTab('list')" class="tab-button px-6 py-3 text-gray-500 font-medium">Department List</button>
-                <button onclick="showTab('assign')" class="tab-button px-6 py-3 text-gray-500 font-medium">Assign Employees</button>
+                <button onclick="showTab('add')"
+                    class="tab-button px-6 py-3 text-yellow-600 border-b-2 border-yellow-600 font-medium">Add
+                    Department</button>
+                <button onclick="showTab('list')" class="tab-button px-6 py-3 text-gray-500 font-medium">Department
+                    List</button>
+                <button onclick="showTab('assign')" class="tab-button px-6 py-3 text-gray-500 font-medium">Assign
+                    Employees</button>
             </div>
         </div>
 
         <!-- Add New Department Form -->
         <div id="add-tab" class="tab-content bg-white shadow-lg rounded-lg p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Create New Department</h2>
-            <form method="POST" action="">
+            <form method="POST" action="" name="add_department_form">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="department_name" class="block text-sm font-medium text-gray-700 mb-1">Department Name</label>
+                        <label for="department_name" class="block text-sm font-medium text-gray-700 mb-1">Department
+                            Name</label>
                         <input type="text" id="department_name" name="department_name" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                     </div>
                     <div>
-                        <label for="department_description" class="block text-sm font-medium text-gray-700 mb-1">Description (for reference only)</label>
+                        <label for="department_description"
+                            class="block text-sm font-medium text-gray-700 mb-1">Description (for reference
+                            only)</label>
                         <input type="text" id="department_description" name="department_description"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                     </div>
                     <div>
-                        <label for="department_manager" class="block text-sm font-medium text-gray-700 mb-1">Department Manager</label>
-                        <select id="department_manager" name="department_manager"
+                        <label for="department_manager" class="block text-sm font-medium text-gray-700 mb-1">Department
+                            Manager<span class="text-red-500">*</span></label>
+                        <select id="department_manager" name="department_manager" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                             <option value="">-- Select Manager --</option>
                             <?php foreach ($managers as $manager): ?>
                                 <option value="<?php echo $manager['id']; ?>">
-                                    <?php echo htmlspecialchars($manager['full_name']); ?> (<?php echo htmlspecialchars($manager['job_position']); ?>)
+                                    <?php echo htmlspecialchars($manager['full_name']); ?>
+                                    (<?php echo htmlspecialchars($manager['job_position']); ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <p class="text-xs text-red-500 mt-1">A manager must be assigned to create a department</p>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -344,38 +323,53 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manager</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employees</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Department Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Description</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Manager</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Employees</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <?php foreach ($departments as $dept): ?>
-                                <tr id="dept-row-<?php echo md5($dept['department_name']); ?>">
-                                    <td class="px-6 py-4 whitespace-nowrap font-medium"><?php echo htmlspecialchars($dept['department_name']); ?></td>
+                                <tr id="dept-row-<?php echo $dept['id']; ?>">
+                                    <td class="px-6 py-4 whitespace-nowrap font-medium">
+                                        <?php echo htmlspecialchars($dept['department_name']); ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-gray-500">
+                                        <?php echo htmlspecialchars($dept['description'] ?? ''); ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <?php if (!empty($dept['manager_name'])): ?>
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                            <span
+                                                class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                                 <?php echo htmlspecialchars($dept['manager_name']); ?>
+                                                (<?php echo htmlspecialchars($dept['manager_position']); ?>)
                                             </span>
                                         <?php else: ?>
                                             <span class="text-gray-500">Not assigned</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                             <?php echo $dept['employee_count']; ?> employees
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <button onclick="editDepartment('<?php echo addslashes($dept['department_name']); ?>', <?php echo $dept['manager_id'] ?? 'null'; ?>)"
+                                        <button
+                                            onclick="editDepartment(<?php echo $dept['id']; ?>, '<?php echo addslashes($dept['department_name']); ?>', '<?php echo addslashes($dept['description'] ?? ''); ?>', <?php echo $dept['manager_id'] ?? 'null'; ?>)"
                                             class="text-indigo-600 hover:text-indigo-900 mr-3">
                                             Edit
                                         </button>
-                                        <button onclick="confirmDelete('<?php echo addslashes($dept['department_name']); ?>', <?php echo $dept['employee_count']; ?>)"
-                                            class="text-red-600 hover:text-red-900" 
-                                            <?php echo ($dept['employee_count'] > 0) ? 'title="This will require reassigning employees"' : ''; ?>>
+                                        <button
+                                            onclick="confirmDelete(<?php echo $dept['id']; ?>, '<?php echo addslashes($dept['department_name']); ?>', <?php echo $dept['employee_count']; ?>)"
+                                            class="text-red-600 hover:text-red-900" <?php echo ($dept['employee_count'] > 0) ? 'title="This will require reassigning employees"' : ''; ?>>
                                             Delete
                                         </button>
                                         <button onclick="viewEmployees('<?php echo addslashes($dept['department_name']); ?>')"
@@ -390,11 +384,11 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                 </div>
             <?php endif; ?>
         </div>
-        
+
         <!-- Assign Employees Tab -->
         <div id="assign-tab" class="tab-content hidden bg-white shadow-lg rounded-lg p-6">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Assign Employees to Department</h2>
-            
+
             <?php if (empty($departments)): ?>
                 <div class="text-center py-8">
                     <p class="text-gray-500">No departments available. Please create a department first.</p>
@@ -402,18 +396,20 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
             <?php else: ?>
                 <form method="POST" action="">
                     <div class="mb-6">
-                        <label for="assign_department_name" class="block text-sm font-medium text-gray-700 mb-1">Select Department</label>
+                        <label for="assign_department_name" class="block text-sm font-medium text-gray-700 mb-1">Select
+                            Department</label>
                         <select id="assign_department_name" name="department_name" required
                             class="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                             <option value="">-- Select Department --</option>
                             <?php foreach ($departments as $dept): ?>
                                 <option value="<?php echo htmlspecialchars($dept['department_name']); ?>">
-                                    <?php echo htmlspecialchars($dept['department_name']); ?> (<?php echo $dept['employee_count']; ?> employees)
+                                    <?php echo htmlspecialchars($dept['department_name']); ?>
+                                    (<?php echo $dept['employee_count']; ?> employees)
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <!-- Department filter options -->
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Filter Employees</label>
@@ -435,39 +431,48 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                             </label>
                         </div>
                     </div>
-                    
+
                     <!-- Search box -->
                     <div class="mb-6">
-                        <label for="employee_search" class="block text-sm font-medium text-gray-700 mb-1">Search Employees</label>
-                        <input type="text" id="employee_search" placeholder="Search by name, position, or department..." 
+                        <label for="employee_search" class="block text-sm font-medium text-gray-700 mb-1">Search
+                            Employees</label>
+                        <input type="text" id="employee_search" placeholder="Search by name, position, or department..."
                             class="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                     </div>
-                    
+
                     <!-- Employee selection area -->
                     <div class="mb-6">
                         <h3 class="text-lg font-medium text-gray-800 mb-2">Select Employees to Assign</h3>
                         <div class="mb-2 flex justify-between items-center">
                             <div>
-                                <button type="button" id="selectAllButton" class="text-sm text-blue-600 hover:text-blue-800">
+                                <button type="button" id="selectAllButton"
+                                    class="text-sm text-blue-600 hover:text-blue-800">
                                     Select All
                                 </button>
                                 <span class="mx-2 text-gray-400">|</span>
-                                <button type="button" id="deselectAllButton" class="text-sm text-blue-600 hover:text-blue-800">
+                                <button type="button" id="deselectAllButton"
+                                    class="text-sm text-blue-600 hover:text-blue-800">
                                     Deselect All
                                 </button>
                             </div>
                             <span class="text-sm text-gray-500" id="selectionCounter">0 employees selected</span>
                         </div>
-                        
+
                         <!-- Employee list with checkboxes -->
                         <div class="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th class="w-10 px-4 py-2"></th>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Department</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Name</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Position</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Current Department</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200" id="employeeCheckboxList">
@@ -475,40 +480,42 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                                     // Fetch all employees
                                     $all_employees_sql = "SELECT id, full_name, job_position, department FROM employees ORDER BY full_name";
                                     $all_employees_result = $conn->query($all_employees_sql);
-                                    
+
                                     if ($all_employees_result && $all_employees_result->num_rows > 0):
                                         while ($emp = $all_employees_result->fetch_assoc()):
                                             $current_dept = empty($emp['department']) ? '(Unassigned)' : $emp['department'];
                                             $is_unassigned = empty($emp['department']);
-                                    ?>
-                                        <tr class="employee-row <?php echo $is_unassigned ? 'unassigned' : 'assigned'; ?>"
-                                            data-name="<?php echo strtolower(htmlspecialchars($emp['full_name'])); ?>"
-                                            data-position="<?php echo strtolower(htmlspecialchars($emp['job_position'])); ?>"
-                                            data-department="<?php echo strtolower(htmlspecialchars($current_dept)); ?>">
-                                            <td class="px-4 py-2">
-                                                <input type="checkbox" name="employee_ids[]" value="<?php echo $emp['id']; ?>"
-                                                    class="employee-checkbox rounded border-gray-300 text-yellow-600 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50">
-                                            </td>
-                                            <td class="px-4 py-2"><?php echo htmlspecialchars($emp['full_name']); ?></td>
-                                            <td class="px-4 py-2">
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                    <?php echo htmlspecialchars($emp['job_position']); ?>
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-2">
-                                                <?php if ($is_unassigned): ?>
-                                                    <span class="text-gray-500 italic"><?php echo $current_dept; ?></span>
-                                                <?php else: ?>
-                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                        <?php echo htmlspecialchars($current_dept); ?>
+                                            ?>
+                                            <tr class="employee-row <?php echo $is_unassigned ? 'unassigned' : 'assigned'; ?>"
+                                                data-name="<?php echo strtolower(htmlspecialchars($emp['full_name'])); ?>"
+                                                data-position="<?php echo strtolower(htmlspecialchars($emp['job_position'])); ?>"
+                                                data-department="<?php echo strtolower(htmlspecialchars($current_dept)); ?>">
+                                                <td class="px-4 py-2">
+                                                    <input type="checkbox" name="employee_ids[]" value="<?php echo $emp['id']; ?>"
+                                                        class="employee-checkbox rounded border-gray-300 text-yellow-600 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50">
+                                                </td>
+                                                <td class="px-4 py-2"><?php echo htmlspecialchars($emp['full_name']); ?></td>
+                                                <td class="px-4 py-2">
+                                                    <span
+                                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                        <?php echo htmlspecialchars($emp['job_position']); ?>
                                                     </span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php
+                                                </td>
+                                                <td class="px-4 py-2">
+                                                    <?php if ($is_unassigned): ?>
+                                                        <span class="text-gray-500 italic"><?php echo $current_dept; ?></span>
+                                                    <?php else: ?>
+                                                        <span
+                                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                            <?php echo htmlspecialchars($current_dept); ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                            <?php
                                         endwhile;
                                     else:
-                                    ?>
+                                        ?>
                                         <tr>
                                             <td colspan="4" class="px-4 py-2 text-center text-gray-500">No employees found.</td>
                                         </tr>
@@ -517,7 +524,7 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                             </table>
                         </div>
                     </div>
-                    
+
                     <div class="mt-6">
                         <button type="submit" name="assign_employees"
                             class="bg-yellow-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-yellow-700 transition">
@@ -534,20 +541,30 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
         <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h3 class="text-xl font-bold text-gray-900 mb-4">Edit Department</h3>
             <form method="POST" action="" id="editForm">
+                <input type="hidden" id="edit_department_id" name="department_id">
                 <input type="hidden" id="edit_old_department_name" name="old_department_name">
                 <div class="mb-4">
-                    <label for="edit_department_name" class="block text-sm font-medium text-gray-700 mb-1">Department Name</label>
+                    <label for="edit_department_name" class="block text-sm font-medium text-gray-700 mb-1">Department
+                        Name</label>
                     <input type="text" id="edit_department_name" name="department_name" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                 </div>
                 <div class="mb-4">
-                    <label for="edit_department_manager" class="block text-sm font-medium text-gray-700 mb-1">Department Manager</label>
+                    <label for="edit_department_description"
+                        class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <input type="text" id="edit_department_description" name="department_description"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
+                </div>
+                <div class="mb-4">
+                    <label for="edit_department_manager" class="block text-sm font-medium text-gray-700 mb-1">Department
+                        Manager</label>
                     <select id="edit_department_manager" name="department_manager"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                         <option value="">-- Select Manager --</option>
                         <?php foreach ($managers as $manager): ?>
                             <option value="<?php echo $manager['id']; ?>">
-                                <?php echo htmlspecialchars($manager['full_name']); ?> (<?php echo htmlspecialchars($manager['job_position']); ?>)
+                                <?php echo htmlspecialchars($manager['full_name']); ?>
+                                (<?php echo htmlspecialchars($manager['job_position']); ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -571,12 +588,14 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
         <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h3 class="text-xl font-bold text-gray-900 mb-4">Delete Department</h3>
             <p id="deleteConfirmText" class="mb-4 text-gray-600">Are you sure you want to delete this department?</p>
-            
+
             <form method="POST" action="" id="deleteForm">
+                <input type="hidden" id="delete_department_id" name="department_id">
                 <input type="hidden" id="delete_department_name" name="department_name">
-                
+
                 <div id="reassignSection" class="mb-4 hidden">
-                    <label for="reassign_to" class="block text-sm font-medium text-gray-700 mb-1">Reassign employees to:</label>
+                    <label for="reassign_to" class="block text-sm font-medium text-gray-700 mb-1">Reassign employees
+                        to:</label>
                     <select id="reassign_to" name="reassign_to" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500">
                         <option value="">-- Select Department --</option>
@@ -586,9 +605,10 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <p class="text-sm text-gray-500 mt-1">All employees in the deleted department will be moved to this department.</p>
+                    <p class="text-sm text-gray-500 mt-1">All employees in the deleted department will be moved to this
+                        department.</p>
                 </div>
-                
+
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="closeDeleteModal()"
                         class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition">
@@ -602,15 +622,17 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
             </form>
         </div>
     </div>
-    
+
     <!-- View Employees Modal -->
-    <div id="viewEmployeesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div id="viewEmployeesModal"
+        class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold text-gray-900" id="viewEmployeesTitle">Department Employees</h3>
                 <button onclick="closeViewEmployeesModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
                     </svg>
                 </button>
             </div>
@@ -635,25 +657,27 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
         document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.add('hidden');
         });
-        
+
         // Deactivate all tab buttons
         document.querySelectorAll('.tab-button').forEach(button => {
             button.classList.remove('text-yellow-600', 'border-b-2', 'border-yellow-600');
             button.classList.add('text-gray-500');
         });
-        
+
         // Show selected tab
         document.getElementById(tabName + '-tab').classList.remove('hidden');
-        
+
         // Activate selected tab button
         document.querySelector(`button[onclick="showTab('${tabName}')"]`).classList.remove('text-gray-500');
         document.querySelector(`button[onclick="showTab('${tabName}')"]`).classList.add('text-yellow-600', 'border-b-2', 'border-yellow-600');
     }
 
-    function editDepartment(deptName, managerId) {
+    function editDepartment(deptId, deptName, deptDescription, managerId) {
+        document.getElementById('edit_department_id').value = deptId;
         document.getElementById('edit_old_department_name').value = deptName;
         document.getElementById('edit_department_name').value = deptName;
-        
+        document.getElementById('edit_department_description').value = deptDescription || '';
+
         // Set manager dropdown value
         const managerSelect = document.getElementById('edit_department_manager');
         if (managerId) {
@@ -661,7 +685,7 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
         } else {
             managerSelect.value = '';
         }
-        
+
         document.getElementById('editModal').classList.remove('hidden');
     }
 
@@ -669,9 +693,10 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
         document.getElementById('editModal').classList.add('hidden');
     }
 
-    function confirmDelete(deptName, employeeCount) {
+    function confirmDelete(deptId, deptName, employeeCount) {
+        document.getElementById('delete_department_id').value = deptId;
         document.getElementById('delete_department_name').value = deptName;
-        
+
         // Filter out the current department from reassign options
         const reassignSelect = document.getElementById('reassign_to');
         for (let i = 0; i < reassignSelect.options.length; i++) {
@@ -681,33 +706,33 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                 reassignSelect.options[i].disabled = false;
             }
         }
-        
+
         if (employeeCount > 0) {
-            document.getElementById('deleteConfirmText').innerText = 
+            document.getElementById('deleteConfirmText').innerText =
                 `Are you sure you want to delete the department "${deptName}"? This department has ${employeeCount} employees that need to be reassigned.`;
             document.getElementById('reassignSection').classList.remove('hidden');
             reassignSelect.required = true;
         } else {
-            document.getElementById('deleteConfirmText').innerText = 
+            document.getElementById('deleteConfirmText').innerText =
                 `Are you sure you want to delete the department "${deptName}"?`;
             document.getElementById('reassignSection').classList.add('hidden');
             reassignSelect.required = false;
         }
-        
+
         document.getElementById('deleteModal').classList.remove('hidden');
     }
 
     function closeDeleteModal() {
         document.getElementById('deleteModal').classList.add('hidden');
     }
-    
+
     function viewEmployees(deptName) {
         const employeesList = document.getElementById('employeesList');
         employeesList.innerHTML = '<p class="text-center py-4 text-gray-500">Loading employees...</p>';
-        
+
         document.getElementById('viewEmployeesTitle').innerText = `${deptName} - Employees`;
         document.getElementById('viewEmployeesModal').classList.remove('hidden');
-        
+
         // Fetch employees for this department
         fetch(`get_department_employees.php?department_name=${encodeURIComponent(deptName)}`)
             .then(response => response.text())
@@ -718,32 +743,32 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                 employeesList.innerHTML = `<p class="text-center py-4 text-red-500">Error loading employees: ${error.message}</p>`;
             });
     }
-    
+
     function closeViewEmployeesModal() {
         document.getElementById('viewEmployeesModal').classList.add('hidden');
     }
 
     // Close modals when clicking outside
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         const editModal = document.getElementById('editModal');
         const deleteModal = document.getElementById('deleteModal');
         const viewEmployeesModal = document.getElementById('viewEmployeesModal');
-        
+
         if (event.target === editModal) {
             closeEditModal();
         }
-        
+
         if (event.target === deleteModal) {
             closeDeleteModal();
         }
-        
+
         if (event.target === viewEmployeesModal) {
             closeViewEmployeesModal();
         }
     };
 
     // Employee assignment functionality
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const employeeFilter = document.getElementsByName('employee_filter');
         const employeeSearch = document.getElementById('employee_search');
         const employeeRows = document.querySelectorAll('.employee-row');
@@ -751,35 +776,35 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
         const selectAllButton = document.getElementById('selectAllButton');
         const deselectAllButton = document.getElementById('deselectAllButton');
         const selectionCounter = document.getElementById('selectionCounter');
-        
+
         // Filter employees by status (all, assigned, unassigned)
         function filterEmployees() {
             let filterValue = document.querySelector('input[name="employee_filter"]:checked').value;
             let searchText = employeeSearch.value.toLowerCase().trim();
-            
+
             employeeRows.forEach(row => {
                 const name = row.dataset.name;
                 const position = row.dataset.position;
                 const department = row.dataset.department;
                 const isUnassigned = row.classList.contains('unassigned');
-                
+
                 // Check if the row matches the filter
                 let matchesFilter = false;
-                if (filterValue === 'all' || 
-                    (filterValue === 'unassigned' && isUnassigned) || 
+                if (filterValue === 'all' ||
+                    (filterValue === 'unassigned' && isUnassigned) ||
                     (filterValue === 'assigned' && !isUnassigned)) {
                     matchesFilter = true;
                 }
-                
+
                 // Check if the row matches the search
                 let matchesSearch = false;
-                if (searchText === '' || 
-                    name.includes(searchText) || 
-                    position.includes(searchText) || 
+                if (searchText === '' ||
+                    name.includes(searchText) ||
+                    position.includes(searchText) ||
                     department.includes(searchText)) {
                     matchesSearch = true;
                 }
-                
+
                 if (matchesFilter && matchesSearch) {
                     row.style.display = '';
                 } else {
@@ -793,18 +818,18 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                 }
             });
         }
-        
+
         // Add event listeners for filtering and searching
         if (employeeFilter.length > 0 && employeeSearch) {
             employeeFilter.forEach(radio => {
                 radio.addEventListener('change', filterEmployees);
             });
-            
+
             employeeSearch.addEventListener('input', filterEmployees);
-            
+
             // Select/deselect all visible rows
             if (selectAllButton) {
-                selectAllButton.addEventListener('click', function() {
+                selectAllButton.addEventListener('click', function () {
                     employeeRows.forEach(row => {
                         if (row.style.display !== 'none') {
                             const checkbox = row.querySelector('.employee-checkbox');
@@ -816,16 +841,16 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                     updateSelectionCounter();
                 });
             }
-            
+
             if (deselectAllButton) {
-                deselectAllButton.addEventListener('click', function() {
+                deselectAllButton.addEventListener('click', function () {
                     employeeCheckboxes.forEach(checkbox => {
                         checkbox.checked = false;
                     });
                     updateSelectionCounter();
                 });
             }
-            
+
             // Update selection counter
             function updateSelectionCounter() {
                 if (selectionCounter) {
@@ -833,14 +858,27 @@ if ($unassigned_result && $unassigned_result->num_rows > 0) {
                     selectionCounter.textContent = count + (count === 1 ? ' employee' : ' employees') + ' selected';
                 }
             }
-            
+
             // Add change event listeners to checkboxes
             employeeCheckboxes.forEach(checkbox => {
                 checkbox.addEventListener('change', updateSelectionCounter);
             });
-            
+
             // Initial update
             updateSelectionCounter();
+        }
+
+        // Form validation for department creation
+        const addDepartmentForm = document.querySelector('form[name="add_department_form"]');
+        if (addDepartmentForm) {
+            addDepartmentForm.addEventListener('submit', function (event) {
+                const managerField = document.getElementById('department_manager');
+                if (!managerField.value) {
+                    event.preventDefault();
+                    alert('Please select a manager for the department.');
+                    managerField.focus();
+                }
+            });
         }
     });
 </script>
