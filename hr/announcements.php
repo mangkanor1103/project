@@ -2,12 +2,15 @@
 session_start();
 include '../config.php';
 include '../components/header.php';
+include 'check_permission.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
     header("Location: ../index.php");
     exit();
 }
+
+requirePermission('manage_calendar');
 
 $success_message = $error_message = "";
 
@@ -150,12 +153,14 @@ if ($result && $result->num_rows > 0) {
                                     <div class="p-4 hover:bg-gray-50 transition-colors rounded-lg">
                                         <div class="flex justify-between mb-2">
                                             <h3 class="font-semibold text-lg text-gray-800">
-                                                <?php echo htmlspecialchars($announcement['title']); ?></h3>
+                                                <?php echo htmlspecialchars($announcement['title']); ?>
+                                            </h3>
                                             <span
                                                 class="text-sm text-gray-500"><?php echo date('M d, Y', strtotime($announcement['created_at'])); ?></span>
                                         </div>
                                         <p class="text-gray-600 mb-3">
-                                            <?php echo nl2br(htmlspecialchars($announcement['content'])); ?></p>
+                                            <?php echo nl2br(htmlspecialchars($announcement['content'])); ?>
+                                        </p>
                                         <div class="flex justify-end">
                                             <a href="#" class="text-sm text-teal-600 hover:text-teal-800 mr-4">Edit</a>
                                             <a href="#" class="text-sm text-red-600 hover:text-red-800"

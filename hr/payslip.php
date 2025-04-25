@@ -2,13 +2,14 @@
 <?php
 session_start();
 include '../config.php'; // Include database configuration
-
-// Check if the user is logged in and has the HR admin role
+include 'check_permission.php';
+// Check if the user is logged in as HR admin
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
-    // Redirect to login page if not logged in
     header("Location: ../login.php");
     exit();
 }
+
+requirePermission('manage_payslips');
 
 // Define the current pay period (e.g., "April 2025")
 $current_period = date('F Y');
@@ -31,7 +32,8 @@ $current_month = date('Y-m');
         <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
             <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
                 <p class="font-bold">Success!</p>
-                <p>Payroll processed successfully. <?php echo $_GET['processed'] ?? 0; ?> expense reimbursements have been processed.</p>
+                <p>Payroll processed successfully. <?php echo $_GET['processed'] ?? 0; ?> expense reimbursements have been
+                    processed.</p>
             </div>
         <?php endif; ?>
 
@@ -41,19 +43,25 @@ $current_month = date('Y-m');
             <p class="text-gray-600">Pay Period: <?php echo $current_period; ?></p>
         </div>
         <!-- Back to Dashboard button -->
-<div class="fixed bottom-6 left-6">
-    <a href="hr_dashboard.php" class="bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Back to Dashboard
-    </a>
-</div>
+        <div class="fixed bottom-6 left-6">
+            <a href="hr_dashboard.php"
+                class="bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
 
         <div class="flex justify-end mb-6">
-            <button onclick="printAllPayslips()" class="bg-green-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-700 transition flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2-2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            <button onclick="printAllPayslips()"
+                class="bg-green-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-700 transition flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2-2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
                 Print All Payslips (Horizontal Table)
             </button>
@@ -109,26 +117,26 @@ $current_month = date('Y-m');
                 $pref_stmt->bind_param("i", $employee['id']);
                 $pref_stmt->execute();
                 $preferences = $pref_stmt->get_result()->fetch_assoc();
-                
+
                 // Set defaults if no preferences found
                 $work_days_per_month = $preferences ? $preferences['work_days_per_month'] : 22;
                 $payment_frequency = $preferences ? $preferences['payment_frequency'] : 'Semi-Monthly';
                 $weekend_workday = $preferences ? $preferences['weekend_workday'] : null;
-                
+
                 // Determine if this is first or second half of month (for Semi-Monthly payments)
                 $current_day = date('d');
                 $is_first_half = $current_day <= 15;
-                
+
                 // Calculate working days for the month or half-month
                 $total_working_days = $work_days_per_month;
                 if ($payment_frequency == 'Semi-Monthly') {
                     $total_working_days = $work_days_per_month / 2;
                 }
-                
+
                 // Calculate days absent (working days - days present)
                 $days_absent = $total_working_days - $days_present;
                 $days_absent = max(0, $days_absent); // Ensure no negative values
-
+            
                 // Fetch approved expenses for this employee in the current month that should be reimbursed
                 $expenses_sql = "
                     SELECT SUM(amount) AS total_reimbursement, COUNT(*) AS expense_count
@@ -148,7 +156,7 @@ $current_month = date('Y-m');
 
                 // Salary calculations based on employee preferences
                 $basic_salary = $employee['basic_salary']; // Monthly salary
-
+            
                 // For semi-monthly payments, adjust the salary to half of monthly
                 $salary_multiplier = ($payment_frequency == 'Semi-Monthly') ? 0.5 : 1;
                 $period_salary = $basic_salary * $salary_multiplier;
@@ -166,7 +174,7 @@ $current_month = date('Y-m');
                 $restday_premium_rate = $hourly_rate * 0.3; // Rest day premium (30% premium)
                 $special_holiday_rate = $hourly_rate * 0.3; // Special holiday premium (30% premium)
                 $legal_holiday_rate = $hourly_rate * 1.0; // Legal holiday premium (100% premium)
-
+            
                 // Calculate absences deduction (days absent * daily rate)
                 $absence_deduction = $days_absent * $daily_rate;
 
@@ -200,15 +208,15 @@ $current_month = date('Y-m');
                 $legal_holiday_pay = $legal_holiday_rate * $total_legal_holiday_hours;
 
                 // Calculate gross salary
-                $gross_salary = $regular_pay - $late_deduction + 
-                               $overtime_pay + $night_diff_pay + $night_ot_pay +
-                               $restday_pay + $special_holiday_pay + $legal_holiday_pay + 
-                               $reimbursement_amount;
+                $gross_salary = $regular_pay - $late_deduction +
+                    $overtime_pay + $night_diff_pay + $night_ot_pay +
+                    $restday_pay + $special_holiday_pay + $legal_holiday_pay +
+                    $reimbursement_amount;
 
                 // Deductions - SSS, PhilHealth, and Pag-IBIG
                 // Use tiered contributions based on salary brackets
                 $monthly_equivalent = $period_salary / $salary_multiplier; // Convert to monthly for brackets
-                
+            
                 // SSS contribution (tiered)
                 if ($monthly_equivalent <= 10000) {
                     $sss = 400 * $salary_multiplier;
@@ -217,21 +225,21 @@ $current_month = date('Y-m');
                 } else {
                     $sss = 1200 * $salary_multiplier;
                 }
-                
+
                 // PhilHealth (3% of monthly salary, split with employer)
                 $philhealth_rate = 0.03;
                 $philhealth = min(max($monthly_equivalent * $philhealth_rate / 2, 300), 1800) * $salary_multiplier;
-                
+
                 // Pag-IBIG (2% with cap)
                 $pagibig = min($monthly_equivalent * 0.02, 100) * $salary_multiplier;
-                
+
                 // Apply contributions only on first half for semi-monthly
                 if ($payment_frequency == 'Semi-Monthly' && !$is_first_half) {
                     $sss = 0;
                     $philhealth = 0;
                     $pagibig = 0;
                 }
-                
+
                 $total_deductions = $sss + $philhealth + $pagibig;
 
                 // Calculate net salary
@@ -240,54 +248,63 @@ $current_month = date('Y-m');
                 <!-- Payslip Card -->
                 <div class="bg-white shadow-lg rounded-lg border border-gray-200 overflow-hidden">
                     <div class="p-6">
-                        <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($employee['full_name']); ?></h2>
-                        <p class="text-sm text-gray-600"><?php echo htmlspecialchars($employee['job_position']); ?> • <?php echo htmlspecialchars($employee['department']); ?></p>
+                        <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($employee['full_name']); ?>
+                        </h2>
+                        <p class="text-sm text-gray-600"><?php echo htmlspecialchars($employee['job_position']); ?> •
+                            <?php echo htmlspecialchars($employee['department']); ?></p>
                         <p class="text-xs text-gray-500 mt-1">
-                            <?php echo $payment_frequency; ?> • 
-                            <?php echo $work_days_per_month; ?> days/month • 
+                            <?php echo $payment_frequency; ?> •
+                            <?php echo $work_days_per_month; ?> days/month •
                             <?php echo $days_present; ?> days present
                         </p>
                     </div>
                     <div class="p-6 bg-gray-50">
                         <p><strong>Period Salary:</strong> ₱<?php echo number_format($period_salary, 2); ?></p>
-                        
+
                         <?php if ($absence_deduction > 0): ?>
                             <p class="flex justify-between items-center mt-1">
                                 <span><strong>Absences (<?php echo $days_absent; ?> days):</strong></span>
-                                <span class="text-red-600 font-medium">- ₱<?php echo number_format($absence_deduction, 2); ?></span>
+                                <span class="text-red-600 font-medium">-
+                                    ₱<?php echo number_format($absence_deduction, 2); ?></span>
                             </p>
                         <?php endif; ?>
-                        
+
                         <?php if ($late_deduction > 0): ?>
                             <p class="flex justify-between items-center mt-1">
                                 <span><strong>Late (<?php echo $total_late_minutes; ?> mins):</strong></span>
-                                <span class="text-red-600 font-medium">- ₱<?php echo number_format($late_deduction, 2); ?></span>
+                                <span class="text-red-600 font-medium">-
+                                    ₱<?php echo number_format($late_deduction, 2); ?></span>
                             </p>
                         <?php endif; ?>
-                        
+
                         <?php if ($overtime_pay > 0): ?>
                             <p class="flex justify-between items-center mt-1">
-                                <span><strong>Overtime (<?php echo number_format($total_overtime_hours, 2); ?> hrs):</strong></span>
-                                <span class="text-green-600 font-medium">+ ₱<?php echo number_format($overtime_pay, 2); ?></span>
+                                <span><strong>Overtime (<?php echo number_format($total_overtime_hours, 2); ?>
+                                        hrs):</strong></span>
+                                <span class="text-green-600 font-medium">+
+                                    ₱<?php echo number_format($overtime_pay, 2); ?></span>
                             </p>
                         <?php endif; ?>
-                        
+
                         <?php if ($night_diff_pay > 0 || $night_ot_pay > 0): ?>
                             <p class="flex justify-between items-center mt-1">
                                 <span><strong>Night Differential:</strong></span>
-                                <span class="text-green-600 font-medium">+ ₱<?php echo number_format($night_diff_pay + $night_ot_pay, 2); ?></span>
+                                <span class="text-green-600 font-medium">+
+                                    ₱<?php echo number_format($night_diff_pay + $night_ot_pay, 2); ?></span>
                             </p>
                         <?php endif; ?>
-                        
+
                         <?php if ($reimbursement_amount > 0): ?>
                             <p class="flex justify-between items-center mt-1">
                                 <span><strong>Reimbursements (<?php echo $expense_count; ?>):</strong></span>
-                                <span class="text-green-600 font-medium">+ ₱<?php echo number_format($reimbursement_amount, 2); ?></span>
+                                <span class="text-green-600 font-medium">+
+                                    ₱<?php echo number_format($reimbursement_amount, 2); ?></span>
                             </p>
                         <?php endif; ?>
-                        
-                        <p class="mt-3 pt-2 border-t"><strong>Gross Pay:</strong> ₱<?php echo number_format($gross_salary, 2); ?></p>
-                        
+
+                        <p class="mt-3 pt-2 border-t"><strong>Gross Pay:</strong>
+                            ₱<?php echo number_format($gross_salary, 2); ?></p>
+
                         <div class="mt-2 text-sm">
                             <p class="flex justify-between">
                                 <span>SSS:</span>
@@ -306,15 +323,17 @@ $current_month = date('Y-m');
                                 <span>- ₱<?php echo number_format($total_deductions, 2); ?></span>
                             </p>
                         </div>
-                        
+
                         <div class="mt-3 pt-3 border-t border-gray-200">
                             <p class="flex justify-between items-center">
                                 <span class="font-bold">Net Salary:</span>
-                                <span class="font-bold text-lg text-blue-700">₱<?php echo number_format($net_salary, 2); ?></span>
+                                <span
+                                    class="font-bold text-lg text-blue-700">₱<?php echo number_format($net_salary, 2); ?></span>
                             </p>
                         </div>
-                        
-                        <button onclick="viewPayslip(<?php echo $employee['id']; ?>)" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+
+                        <button onclick="viewPayslip(<?php echo $employee['id']; ?>)"
+                            class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
                             View Details
                         </button>
                     </div>
@@ -325,7 +344,8 @@ $current_month = date('Y-m');
 </main>
 
 <!-- Modal -->
-<div id="payslipModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50 overflow-auto">
+<div id="payslipModal"
+    class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50 overflow-auto">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         <div class="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
             <h2 class="text-xl font-bold text-gray-800">Detailed Payslip</h2>
@@ -340,12 +360,12 @@ $current_month = date('Y-m');
 <?php include '../components/footer.php'; ?>
 
 <script>
-// Add this function to your existing script section
-function printAllPayslips() {
-    // Show loading message
-    const loadingModal = document.createElement('div');
-    loadingModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50';
-    loadingModal.innerHTML = `
+    // Add this function to your existing script section
+    function printAllPayslips() {
+        // Show loading message
+        const loadingModal = document.createElement('div');
+        loadingModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50';
+        loadingModal.innerHTML = `
         <div class="bg-white p-5 rounded-lg shadow-lg">
             <div class="flex items-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mr-3"></div>
@@ -353,20 +373,20 @@ function printAllPayslips() {
             </div>
         </div>
     `;
-    document.body.appendChild(loadingModal);
-    
-    // Fetch all employee data
-    fetch('get_all_payslips.php')
-        .then(response => response.text())
-        .then(data => {
-            // Remove loading modal
-            document.body.removeChild(loadingModal);
-            
-            // Open new window with horizontal table layout
-            const printWindow = window.open('', '', 'width=1200,height=800,scrollbars=yes');
-            printWindow.document.write('<html><head><title>All Employee Payslips</title>');
-            printWindow.document.write('<style>');
-            printWindow.document.write(`
+        document.body.appendChild(loadingModal);
+
+        // Fetch all employee data
+        fetch('get_all_payslips.php')
+            .then(response => response.text())
+            .then(data => {
+                // Remove loading modal
+                document.body.removeChild(loadingModal);
+
+                // Open new window with horizontal table layout
+                const printWindow = window.open('', '', 'width=1200,height=800,scrollbars=yes');
+                printWindow.document.write('<html><head><title>All Employee Payslips</title>');
+                printWindow.document.write('<style>');
+                printWindow.document.write(`
                 @page { size: landscape; }
                 body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
                 h1 { text-align: center; margin-bottom: 20px; color: #2563eb; }
@@ -379,57 +399,57 @@ function printAllPayslips() {
                 .page-break { page-break-after: always; }
                 .bg-green-100 { background-color: #d1fae5; }
             `);
-            printWindow.document.write('</style></head><body>');
-            printWindow.document.write(data);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            
-            setTimeout(function() {
-                printWindow.print();
-            }, 1000);
-        })
-        .catch(error => {
-            // Remove loading modal
-            document.body.removeChild(loadingModal);
-            alert('Error generating payslips: ' + error.message);
-        });
-}
+                printWindow.document.write('</style></head><body>');
+                printWindow.document.write(data);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
 
-// Keep your existing functions here
-function viewPayslip(employeeId) {
-    // Show loading state
-    const modalContent = document.getElementById('modalContent');
-    modalContent.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div></div>';
-    document.getElementById('payslipModal').classList.remove('hidden');
-    
-    // Fetch employee payslip data using AJAX
-    fetch(`get_payslip.php?employee_id=${employeeId}`)
-        .then(response => response.text())
-        .then(data => {
-            modalContent.innerHTML = data;
-        })
-        .catch(error => {
-            modalContent.innerHTML = `<div class="text-red-500">Error loading payslip data: ${error.message}</div>`;
-        });
-}
-
-function closeModal() {
-    document.getElementById('payslipModal').classList.add('hidden');
-}
-
-// Close modal when clicking outside the content area
-document.getElementById('payslipModal').addEventListener('click', function(event) {
-    if (event.target === this) {
-        closeModal();
+                setTimeout(function () {
+                    printWindow.print();
+                }, 1000);
+            })
+            .catch(error => {
+                // Remove loading modal
+                document.body.removeChild(loadingModal);
+                alert('Error generating payslips: ' + error.message);
+            });
     }
-});
 
-function printPayslip() {
-    const printContent = document.getElementById('payslip-content').innerHTML;
-    const printWindow = window.open('', '', 'width=800,height=600');
-    printWindow.document.write('<html><head><title>Print Payslip</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write(`
+    // Keep your existing functions here
+    function viewPayslip(employeeId) {
+        // Show loading state
+        const modalContent = document.getElementById('modalContent');
+        modalContent.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div></div>';
+        document.getElementById('payslipModal').classList.remove('hidden');
+
+        // Fetch employee payslip data using AJAX
+        fetch(`get_payslip.php?employee_id=${employeeId}`)
+            .then(response => response.text())
+            .then(data => {
+                modalContent.innerHTML = data;
+            })
+            .catch(error => {
+                modalContent.innerHTML = `<div class="text-red-500">Error loading payslip data: ${error.message}</div>`;
+            });
+    }
+
+    function closeModal() {
+        document.getElementById('payslipModal').classList.add('hidden');
+    }
+
+    // Close modal when clicking outside the content area
+    document.getElementById('payslipModal').addEventListener('click', function (event) {
+        if (event.target === this) {
+            closeModal();
+        }
+    });
+
+    function printPayslip() {
+        const printContent = document.getElementById('payslip-content').innerHTML;
+        const printWindow = window.open('', '', 'width=800,height=600');
+        printWindow.document.write('<html><head><title>Print Payslip</title>');
+        printWindow.document.write('<style>');
+        printWindow.document.write(`
     body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
     .header { text-align: center; margin-bottom: 20px; }
     .header h1 { color: #2563eb; margin-bottom: 5px; }
@@ -439,16 +459,16 @@ function printPayslip() {
     .total { font-weight: bold; }
     .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #6b7280; }
     `);
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write(printContent);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    setTimeout(function () {
-        printWindow.print();
-    }, 500);
-}
+        printWindow.document.write('</style></head><body>');
+        printWindow.document.write(printContent);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        setTimeout(function () {
+            printWindow.print();
+        }, 500);
+    }
 
-function downloadPDF() {
-    alert("PDF download functionality requires a server-side PDF generation library.");
-}
+    function downloadPDF() {
+        alert("PDF download functionality requires a server-side PDF generation library.");
+    }
 </script>

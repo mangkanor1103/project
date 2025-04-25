@@ -3,12 +3,15 @@
 session_start();
 include '../config.php';
 include '../components/header.php'; // Include your header
+include 'check_permission.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
     header("Location: ../index.php");
     exit();
 }
+
+requirePermission('assign_manager');
 
 // Define available job positions
 $available_positions = [
@@ -25,7 +28,7 @@ $available_positions = [
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['promote_employee'])) {
     $employee_id = intval($_POST['employee_id']);
     $new_position = $_POST['new_position'];
-    
+
     // Validate that the position is in our allowed list
     if (array_key_exists($new_position, $available_positions)) {
         $update_sql = "UPDATE employees SET job_position = ? WHERE id = ?";
@@ -75,12 +78,18 @@ if ($result && $result->num_rows > 0) {
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Position</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Update Position</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full
+                            Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Current Position</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Department</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Update Position</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -88,18 +97,23 @@ if ($result && $result->num_rows > 0) {
                         <?php foreach ($employees as $employee): ?>
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap"><?php echo $employee['id']; ?></td>
-                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($employee['full_name']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($employee['full_name']); ?>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($employee['email']); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                         <?php echo htmlspecialchars($employee['job_position']); ?>
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($employee['department']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($employee['department']); ?>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    <form method="POST" class="flex justify-end items-center space-x-2" onsubmit="return confirm('Are you sure you want to update this employee\'s position?');">
+                                    <form method="POST" class="flex justify-end items-center space-x-2"
+                                        onsubmit="return confirm('Are you sure you want to update this employee\'s position?');">
                                         <input type="hidden" name="employee_id" value="<?php echo $employee['id']; ?>">
-                                        <select name="new_position" class="rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                        <select name="new_position"
+                                            class="rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                             <?php foreach ($available_positions as $position_key => $position_label): ?>
                                                 <option value="<?php echo $position_key; ?>" <?php echo ($employee['job_position'] === $position_key) ? 'selected' : ''; ?>>
                                                     <?php echo $position_label; ?>
@@ -115,7 +129,8 @@ if ($result && $result->num_rows > 0) {
                                     <div id="custom-position-<?php echo $employee['id']; ?>" class="hidden mt-2">
                                         <form method="POST" class="flex justify-end items-center space-x-2">
                                             <input type="hidden" name="employee_id" value="<?php echo $employee['id']; ?>">
-                                            <input type="text" name="new_position" placeholder="Enter custom position" class="rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm">
+                                            <input type="text" name="new_position" placeholder="Enter custom position"
+                                                class="rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm">
                                             <button type="submit" name="promote_employee"
                                                 class="bg-green-600 text-white px-3 py-1 rounded-md shadow-sm hover:bg-green-700 transition text-sm">
                                                 Apply
@@ -137,22 +152,22 @@ if ($result && $result->num_rows > 0) {
 </main>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Add event listeners to all position selects
-    const selects = document.querySelectorAll('select[name="new_position"]');
-    selects.forEach(select => {
-        select.addEventListener('change', function() {
-            const employeeId = this.closest('form').querySelector('input[name="employee_id"]').value;
-            const customDiv = document.getElementById('custom-position-' + employeeId);
-            
-            if (this.value === 'Custom') {
-                customDiv.classList.remove('hidden');
-            } else {
-                customDiv.classList.add('hidden');
-            }
+    document.addEventListener('DOMContentLoaded', function () {
+        // Add event listeners to all position selects
+        const selects = document.querySelectorAll('select[name="new_position"]');
+        selects.forEach(select => {
+            select.addEventListener('change', function () {
+                const employeeId = this.closest('form').querySelector('input[name="employee_id"]').value;
+                const customDiv = document.getElementById('custom-position-' + employeeId);
+
+                if (this.value === 'Custom') {
+                    customDiv.classList.remove('hidden');
+                } else {
+                    customDiv.classList.add('hidden');
+                }
+            });
         });
     });
-});
 </script>
 
 <?php include '../components/footer.php'; ?>
