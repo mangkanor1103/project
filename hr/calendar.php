@@ -2,12 +2,15 @@
 session_start();
 include '../config.php';
 include '../components/header.php';
+include 'check_permission.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
     header("Location: ../index.php");
     exit();
 }
+
+requirePermission('create_employee');
 
 $success_message = $error_message = "";
 

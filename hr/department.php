@@ -2,13 +2,14 @@
 <?php
 session_start();
 include '../config.php';
-
-// Check if the user is logged in and has the HR admin role
+include 'check_permission.php';
+// Check if the user is logged in as HR admin
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
-    // Redirect to login page if not logged in
     header("Location: ../login.php");
     exit();
 }
+
+requirePermission('manage_departments');
 
 // Handle department operations
 $success_message = "";

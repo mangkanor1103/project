@@ -2,13 +2,14 @@
 session_start();
 include '../config.php';
 include '../components/header.php';
-
-// Check if admin is logged in
+include 'check_permission.php';
+// Check if the user is logged in as HR admin
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
-    header("Location: ../index.php");
+    header("Location: ../login.php");
     exit();
 }
 
+requirePermission('view_employees');
 $success_message = $error_message = "";
 
 // Handle delete employee request

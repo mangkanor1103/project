@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../config.php';
+include 'check_permission.php';
 
 // Check if the user is logged in and has the HR admin role
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
@@ -8,6 +9,8 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
     header("Location: ../login.php");
     exit();
 }
+
+requirePermission('leave_approval');
 
 // Process approval or rejection
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -79,13 +82,17 @@ $result = $conn->query($sql);
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
                             <td class="px-6 py-4 border-b text-sm text-gray-700">
-                                <?php echo htmlspecialchars($row['full_name']); ?></td>
+                                <?php echo htmlspecialchars($row['full_name']); ?>
+                            </td>
                             <td class="px-6 py-4 border-b text-sm text-gray-700">
-                                <?php echo htmlspecialchars($row['leave_type']); ?></td>
+                                <?php echo htmlspecialchars($row['leave_type']); ?>
+                            </td>
                             <td class="px-6 py-4 border-b text-sm text-gray-700">
-                                <?php echo htmlspecialchars($row['start_date']); ?></td>
+                                <?php echo htmlspecialchars($row['start_date']); ?>
+                            </td>
                             <td class="px-6 py-4 border-b text-sm text-gray-700">
-                                <?php echo htmlspecialchars($row['end_date']); ?></td>
+                                <?php echo htmlspecialchars($row['end_date']); ?>
+                            </td>
                             <td class="px-6 py-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($row['reason']); ?>
                             </td>
                             <td class="px-6 py-4 border-b text-sm text-gray-700">

@@ -2,6 +2,7 @@
 session_start();
 include '../components/header.php';
 include_once '../config.php'; // Ensure database connection is available
+include 'check_permission.php';
 
 // Check if the user is logged in and has the HR admin role
 if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true) {
@@ -9,6 +10,8 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
     header("Location: ../login.php");
     exit();
 }
+
+requirePermission('create_employee');
 
 // Fetch departments from the departments table
 $departments = [];
