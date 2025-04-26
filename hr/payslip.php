@@ -252,9 +252,38 @@ include '../components/header.php';
                     }
                 }
 
-                $total_deductions = $sss + $philhealth + $pagibig;
+                // Add this code after the existing deductions (SSS, PhilHealth, and Pag-IBIG)
+                // Around line 218, after calculating $pagibig
 
-                // Calculate net salary
+                // Get insurance premium information if the employee has insurance
+                $insurance_premium = 0;
+                $insurance_name = "None";
+
+                if (!empty($employee['insurance_id'])) {
+                    $insurance_sql = "SELECT plan_name, monthly_cost FROM insurance WHERE id = ?";
+                    $insurance_stmt = $conn->prepare($insurance_sql);
+                    $insurance_stmt->bind_param("i", $employee['insurance_id']);
+                    $insurance_stmt->execute();
+                    $insurance_result = $insurance_stmt->get_result();
+                    
+                    if ($insurance_data = $insurance_result->fetch_assoc()) {
+                        // For monthly payment, deduct the full premium
+                        // For semi-monthly, deduct half in each payment
+                        $insurance_name = $insurance_data['plan_name'];
+                        $monthly_premium = $insurance_data['monthly_cost'];
+                        
+                        if ($payment_frequency == 'Semi-Monthly') {
+                            $insurance_premium = $monthly_premium / 2;
+                        } else {
+                            $insurance_premium = $monthly_premium;
+                        }
+                    }
+                }
+
+                // Update total deductions to include insurance premium
+                $total_deductions = $sss + $philhealth + $pagibig + $insurance_premium;
+
+                // Calculate net salary with insurance premium deducted
                 $net_salary = $gross_salary - $total_deductions;
                 
                 // Display formats for hours
@@ -379,6 +408,12 @@ include '../components/header.php';
                                 <span>Pag-IBIG:</span>
                                 <span>- ₱<?php echo number_format($pagibig, 2); ?></span>
                             </p>
+                            <?php if ($insurance_premium > 0): ?>
+                            <p class="flex justify-between">
+                                <span>Insurance (<?php echo htmlspecialchars($insurance_name); ?>):</span>
+                                <span>- ₱<?php echo number_format($insurance_premium, 2); ?></span>
+                            </p>
+                            <?php endif; ?>
                             <p class="flex justify-between font-medium">
                                 <span>Total Deductions:</span>
                                 <span>- ₱<?php echo number_format($total_deductions, 2); ?></span>

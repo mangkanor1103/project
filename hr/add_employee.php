@@ -25,6 +25,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $emergency_name = $_POST['emergency_name'];
     $emergency_relationship = $_POST['emergency_relationship'];
     $emergency_contact = $_POST['emergency_contact'];
+    // Add insurance_id (new line)
+    $insurance_id = isset($_POST['insurance_id']) && !empty($_POST['insurance_id']) ? $_POST['insurance_id'] : null;
 
     // Set a fixed temporary password
     $password = "12345678"; // Temporary password
@@ -38,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         move_uploaded_file($_FILES['image']['tmp_name'], $target);
     }
 
-    // Insert to database
+    // Insert to database - add insurance_id to the column list and values placeholders
     $sql = "INSERT INTO employees (
                 full_name, dob, gender, contact_number, email, home_address, image,
                 job_position, department, employee_type, date_hired, work_schedule,
@@ -49,69 +51,78 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        $stmt->bind_param(
-            "ssssssssssssssssssdissss",
-            $full_name,
-            $dob,
-            $gender,
-            $contact_number,
-            $email,
-            $home_address,
-            $image_name,
-            $job_position,
-            $department,
-            $employee_type,
-            $date_hired,
-            $work_schedule,
-            $sss_number,
-            $philhealth_number,
-            $pagibig_number,
-            $tin,
-            $status,
-            $salary_type,
-            $basic_salary,
-            $overtime_bonus,
-            $emergency_name,
-            $emergency_relationship,
-            $emergency_contact,
-            $hashed_password
-        );
+    $stmt->bind_param(
+        "ssssssssssssssssssdissss", // Now 24 's' characters
+        $full_name,          
+        $dob,                
+        $gender,             
+        $contact_number,     
+        $email,              
+        $home_address,       
+        $image_name,         
+        $job_position,       
+        $department,        
+        $employee_type,      
+        $date_hired,        
+        $work_schedule,      
+        $sss_number,        
+        $philhealth_number,  
+        $pagibig_number,     
+        $tin,                
+        $status,             
+        $salary_type,        
+        $basic_salary,       
+        $overtime_bonus,     
+        $emergency_name,     
+        $emergency_relationship,
+        $emergency_contact,  
+        $hashed_password     
+    );
 
-        if ($stmt->execute()) {
-            // Success message with SweetAlert2
-            echo "
-            <!DOCTYPE html>
-            <html lang='en'>
-            <head>
-                <meta charset='UTF-8'>
-                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <title>Employee Created</title>
-                <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-            </head>
-            <body>
-                <script>
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Employee Created!',
-                        html: '<p>The temporary password is <b>12345678</b>.</p>',
-                        showConfirmButton: false,
-                        timer: 2000,
-                        customClass: {
-                            popup: 'swal2-popup swal2-rounded swal2-shadow'
-                        }
-                    }).then(() => {
-                        window.location.href = 'hr_dashboard.php';
-                    });
-                </script>
-            </body>
-            </html>";
-            exit();
-        } else {
-            echo "Database Error: " . $stmt->error;
+    if ($stmt->execute()) {
+        // Get the new employee's ID
+        $employee_id = $conn->insert_id;
+        
+        // Add insurance in a separate query if selected
+        if ($insurance_id !== null) {
+            $update_sql = "UPDATE employees SET insurance_id = ? WHERE id = ?";
+            $update_stmt = $conn->prepare($update_sql);
+            $update_stmt->bind_param("ii", $insurance_id, $employee_id);
+            $update_stmt->execute();
         }
+        
+        // Success message with SweetAlert2
+        echo "
+        <!DOCTYPE html>
+        <html lang='en'>
+        <head>
+            <meta charset='UTF-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <title>Employee Created</title>
+            <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+        </head>
+        <body>
+            <script>
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Employee Created!',
+                    html: '<p>The temporary password is <b>12345678</b>.</p>',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    customClass: {
+                        popup: 'swal2-popup swal2-rounded swal2-shadow'
+                    }
+                }).then(() => {
+                    window.location.href = 'hr_dashboard.php';
+                });
+            </script>
+        </body>
+        </html>";
+        exit();
     } else {
-        echo "Prepare failed: " . $conn->error;
+        echo "Database Error: " . $stmt->error;
     }
+} else {
+    echo "Prepare failed: " . $conn->error;
 }
 ?>

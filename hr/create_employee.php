@@ -368,7 +368,7 @@ if ($job_result && $job_result->num_rows > 0) {
 
             <!-- Government Details -->
             <fieldset class="form-fieldset">
-                <legend>Government Details</legend>
+                <legend>Government & Insurance Details</legend>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="sss_number" class="form-label">SSS Number <span
@@ -393,15 +393,37 @@ if ($job_result && $job_result->num_rows > 0) {
                         <input type="text" id="tin" name="tin" class="form-input" required>
                     </div>
                 </div>
-                <div class="mt-4">
-                    <label for="status" class="form-label">Marital Status <span class="text-red-500">*</span></label>
-                    <select id="status" name="status" class="form-select" required>
-                        <option value="">Select</option>
-                        <option value="Single">Single</option>
-                        <option value="Married">Married</option>
-                        <option value="Widowed">Widowed</option>
-                        <option value="Divorced">Divorced</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label for="status" class="form-label">Marital Status <span class="text-red-500">*</span></label>
+                        <select id="status" name="status" class="form-select" required>
+                            <option value="">Select</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Widowed">Widowed</option>
+                            <option value="Divorced">Divorced</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="insurance_id" class="form-label">Insurance Plan</label>
+                        <select id="insurance_id" name="insurance_id" class="form-select">
+                            <option value="">No Insurance</option>
+                            <?php
+                            // Fetch insurance plans
+                            $insurance_query = "SELECT id, plan_name, monthly_cost FROM insurance ORDER BY plan_name";
+                            $insurance_result = $conn->query($insurance_query);
+                            
+                            if ($insurance_result && $insurance_result->num_rows > 0) {
+                                while ($insurance = $insurance_result->fetch_assoc()) {
+                                    echo '<option value="' . $insurance['id'] . '">' . 
+                                        htmlspecialchars($insurance['plan_name']) . 
+                                        ' (₱' . number_format($insurance['monthly_cost'], 2) . '/month)</option>';
+                                }
+                            }
+                            ?>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Employee will be automatically enrolled if selected</p>
+                    </div>
                 </div>
             </fieldset>
 

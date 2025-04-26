@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 25, 2025 at 01:59 PM
+-- Generation Time: Apr 26, 2025 at 08:48 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -65,19 +65,20 @@ CREATE TABLE `admin_permissions` (
 
 INSERT INTO `admin_permissions` (`id`, `admin_id`, `permission`, `created_at`) VALUES
 (14, 9, 'create_employee', '2025-04-25 08:23:37'),
-(15, 6, 'create_employee', '2025-04-25 08:25:10'),
-(16, 6, 'assign_manager', '2025-04-25 08:25:10'),
-(17, 6, 'leave_approval', '2025-04-25 08:25:10'),
-(18, 6, 'manage_announcements', '2025-04-25 08:25:10'),
-(19, 6, 'manage_calendar', '2025-04-25 08:25:10'),
-(20, 6, 'expense_approval', '2025-04-25 08:25:10'),
-(21, 6, 'view_employees', '2025-04-25 08:25:10'),
-(22, 6, 'manage_payslips', '2025-04-25 08:25:10'),
-(23, 6, 'manage_departments', '2025-04-25 08:25:10'),
-(24, 6, 'manage_attendance', '2025-04-25 08:25:10'),
-(25, 6, 'manage_job_positions', '2025-04-25 08:25:10'),
-(26, 6, 'manage_work_preferences', '2025-04-25 08:25:10'),
-(27, 6, 'system_settings', '2025-04-25 08:25:10');
+(27, 6, 'system_settings', '2025-04-25 08:25:10'),
+(28, 6, 'create_employee', '2025-04-26 05:26:55'),
+(29, 6, 'assign_manager', '2025-04-26 05:26:55'),
+(30, 6, 'leave_approval', '2025-04-26 05:26:55'),
+(31, 6, 'manage_announcements', '2025-04-26 05:26:55'),
+(32, 6, 'manage_calendar', '2025-04-26 05:26:55'),
+(33, 6, 'expense_approval', '2025-04-26 05:26:55'),
+(34, 6, 'view_employees', '2025-04-26 05:26:55'),
+(35, 6, 'manage_payslips', '2025-04-26 05:26:55'),
+(36, 6, 'manage_departments', '2025-04-26 05:26:55'),
+(37, 6, 'manage_attendance', '2025-04-26 05:26:55'),
+(38, 6, 'manage_job_positions', '2025-04-26 05:26:55'),
+(39, 6, 'manage_work_preferences', '2025-04-26 05:26:55'),
+(40, 6, 'manage_insurance', '2025-04-26 05:28:41');
 
 -- --------------------------------------------------------
 
@@ -142,22 +143,24 @@ CREATE TABLE `attendance` (
   `legal_holiday_hours` decimal(5,2) DEFAULT 0.00,
   `is_absent` tinyint(1) DEFAULT 0,
   `is_holiday` tinyint(1) DEFAULT 0,
-  `is_special_event` tinyint(1) DEFAULT 0
+  `is_special_event` tinyint(1) DEFAULT 0,
+  `late_minutes` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `attendance`
 --
 
-INSERT INTO `attendance` (`id`, `employee_id`, `date`, `time_in`, `time_out`, `hours_worked`, `overtime_hours`, `night_hours`, `night_overtime_hours`, `holiday_hours`, `restday_hours`, `special_holiday_hours`, `legal_holiday_hours`, `is_absent`, `is_holiday`, `is_special_event`) VALUES
-(1, 8, '2025-04-19', '03:10:16', '03:10:20', NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(2, 8, '2025-04-20', '02:07:52', '02:08:54', 0.02, 0.00, 0.02, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(3, 10, '2025-04-20', '02:13:06', '02:52:08', 0.650556, 0.00, 0.65, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(4, 11, '2025-04-20', '03:00:18', '03:04:01', 0.0619444, 0.00, 0.06, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0),
-(5, 8, '2025-04-21', '11:51:40', NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1),
-(6, 11, '2025-04-21', '12:21:17', '12:24:22', 0.0513889, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1),
-(7, 7, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0),
-(8, 9, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0);
+INSERT INTO `attendance` (`id`, `employee_id`, `date`, `time_in`, `time_out`, `hours_worked`, `overtime_hours`, `night_hours`, `night_overtime_hours`, `holiday_hours`, `restday_hours`, `special_holiday_hours`, `legal_holiday_hours`, `is_absent`, `is_holiday`, `is_special_event`, `late_minutes`) VALUES
+(1, 8, '2025-04-19', '03:10:16', '03:10:20', NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, 0),
+(2, 8, '2025-04-20', '02:07:52', '02:08:54', 0.02, 0.00, 0.02, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, 0),
+(3, 10, '2025-04-20', '02:13:06', '02:52:08', 0.650556, 0.00, 0.65, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, 0),
+(4, 11, '2025-04-20', '03:00:18', '03:04:01', 0.0619444, 0.00, 0.06, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, 0),
+(5, 8, '2025-04-21', '11:51:40', NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, 0),
+(6, 11, '2025-04-21', '12:21:17', '12:24:22', 0.0513889, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, 0),
+(7, 7, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0, 0),
+(8, 9, '2025-04-21', NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 0, 0, 0),
+(9, 8, '2025-04-26', '03:53:04', NULL, NULL, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -260,26 +263,49 @@ CREATE TABLE `employees` (
   `emergency_relationship` varchar(100) NOT NULL,
   `emergency_contact` varchar(20) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `password` varchar(255) NOT NULL
+  `password` varchar(255) NOT NULL,
+  `insurance_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `employees`
 --
 
-INSERT INTO `employees` (`id`, `full_name`, `dob`, `gender`, `contact_number`, `email`, `home_address`, `image`, `job_position`, `department`, `employee_type`, `date_hired`, `work_schedule`, `sss_number`, `philhealth_number`, `pagibig_number`, `tin`, `status`, `salary_type`, `basic_salary`, `overtime_bonus`, `emergency_name`, `emergency_relationship`, `emergency_contact`, `created_at`, `password`) VALUES
-(1, 'Rhea M. Melchor', '2025-04-03', 'Male', '09234567654', 'rheamelchor@gmail.com', 'San Vicente', '', 'grgr', 'grdgrr', 'Regular', '2025-05-01', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 44.00, 1, '43', '3543', '35345', '2025-04-16 14:22:33', ''),
-(2, 'Rhea M. Melchor', '2025-04-03', 'Male', '09234567654', 'rheamelchor@gmail.com', 'San Vicente', '', 'grgr', 'grdgrr', 'Regular', '2025-05-01', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 44.00, 1, '43', '3543', '35345', '2025-04-16 14:24:15', ''),
-(3, 'Kian A. rodriguez', '2025-05-02', 'Male', '09234567654', 'rheamelchor@gmail.com', 'egegw', '', 'grgr', 'grdgrr', 'Regular', '2025-04-19', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, '43', '3543', '35345', '2025-04-16 14:39:04', ''),
-(4, 'Kian A. rodriguez', '2025-04-09', 'Male', '09234567654', 'rheamelchor@gmail.com', 'egegw', '488600066_1207743820874183_7935915282642254921_n.jpg', 'grgr', 'grdgrr', 'Regular', '2025-04-08', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 44.00, 1, '43', '3543', '35345', '2025-04-18 23:01:30', '$2y$10$Rtr74GKAe6J0Y2KayYAmd.TUL3V2DvYOZr7o0Sfai4ftCHWsfe04i'),
-(5, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:16:00', '$2y$10$wU/z2NSskO1gu81swDAxbecWIJqCpTwlXyjjhIjhCTnOlzuJsS9C.'),
-(6, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:16:09', '$2y$10$f/qmTo5aM3hvmFz3s2iyYuQ6rUh6LF.4FT4BB06vevdZ1Ghc9Te06'),
-(7, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'hr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:17:25', '$2y$10$wJI5.P.8eAI3S1k2xx2Jg.GYZIwZ9KiVCCAEKOT39hsiIZA1zJGe2'),
-(8, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:10', '$2y$10$dE9WWPqojlW1sdb9asQlouWABPlNBaysnHtvdSvtHJ3sr9Fl.48Ky'),
-(9, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:18', '$2y$10$ithgkMhmMFfLRNbfFzM0nOJ9bGfT326IVlDkMMiAgyg/FtWx6te1K'),
-(10, 'Rhea M. Melchor', '2025-04-15', 'Female', '09234567654', 'rheamelchor2@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'ChatGPT Image Apr 7, 2025, 08_16_06 PM.png', 'grgr', 'grdgrr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:12:26', '$2y$10$T6zN7.1Z.7PJ/g1NnC/gqOJ2MPlsLV98Uf8OZ0qNveIK0..vqe8zC'),
-(11, 'Rhea M. Melchor', '2025-05-07', 'Female', '09234567654', 'rheamelchor3@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', '488600066_1207743820874183_7935915282642254921_n.jpg', 'Manager', 'Sales', 'Regular', '2025-04-21', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:59:37', '$2y$10$eY7MopnTiZy7FsppJWu3QeEm7LiE3o9TEjho8nfPyqGTu1Wzx64Y.'),
-(13, 'Joruel Calingasan', '2002-01-04', 'Male', '9171234567', 'joruel@gmail.com', '1234 Mango St., Makati City, Philippines', NULL, 'Director', 'Marketing', 'Regular', '2025-01-05', 'dgrg', '353', '3535', '343', '4354', 'Single', 'Fixed', 20500.00, 1, 'Winlyn', 'Wife', '2134324', '2025-04-23 14:10:23', '$2y$10$qpAGKMs35Ow58iEktbs8Nuxfpo107.YLH7DX6nwEJ4J7b8WceLLpy');
+INSERT INTO `employees` (`id`, `full_name`, `dob`, `gender`, `contact_number`, `email`, `home_address`, `image`, `job_position`, `department`, `employee_type`, `date_hired`, `work_schedule`, `sss_number`, `philhealth_number`, `pagibig_number`, `tin`, `status`, `salary_type`, `basic_salary`, `overtime_bonus`, `emergency_name`, `emergency_relationship`, `emergency_contact`, `created_at`, `password`, `insurance_id`) VALUES
+(1, 'Rhea M. Melchor', '2025-04-03', 'Male', '09234567654', 'rheamelchor@gmail.com', 'San Vicente', '', 'grgr', 'grdgrr', 'Regular', '2025-05-01', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 44.00, 1, '43', '3543', '35345', '2025-04-16 14:22:33', '', NULL),
+(2, 'Rhea M. Melchor', '2025-04-03', 'Male', '09234567654', 'rheamelchor@gmail.com', 'San Vicente', '', 'grgr', 'grdgrr', 'Regular', '2025-05-01', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 44.00, 1, '43', '3543', '35345', '2025-04-16 14:24:15', '', NULL),
+(3, 'Kian A. rodriguez', '2025-05-02', 'Male', '09234567654', 'rheamelchor@gmail.com', 'egegw', '', 'grgr', 'grdgrr', 'Regular', '2025-04-19', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, '43', '3543', '35345', '2025-04-16 14:39:04', '', NULL),
+(4, 'Kian A. rodriguez', '2025-04-09', 'Male', '09234567654', 'rheamelchor@gmail.com', 'egegw', '488600066_1207743820874183_7935915282642254921_n.jpg', 'grgr', 'grdgrr', 'Regular', '2025-04-08', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 44.00, 1, '43', '3543', '35345', '2025-04-18 23:01:30', '$2y$10$Rtr74GKAe6J0Y2KayYAmd.TUL3V2DvYOZr7o0Sfai4ftCHWsfe04i', NULL),
+(5, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:16:00', '$2y$10$wU/z2NSskO1gu81swDAxbecWIJqCpTwlXyjjhIjhCTnOlzuJsS9C.', NULL),
+(6, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'grdgrr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:16:09', '$2y$10$f/qmTo5aM3hvmFz3s2iyYuQ6rUh6LF.4FT4BB06vevdZ1Ghc9Te06', NULL),
+(7, 'Kian A. rodriguez1', '2025-04-17', 'Male', '09234567654', 'rheamelchor@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'a39db249-1746-4664-8946-98d3b2a4e397.jfif', 'grgr', 'hr', 'Regular', '2025-04-10', 'dgrg', '353', '3535', '343', '3543', 'Divorced', 'Fixed', 44.00, 0, '43', '3543', '35345', '2025-04-18 23:17:25', '$2y$10$wJI5.P.8eAI3S1k2xx2Jg.GYZIwZ9KiVCCAEKOT39hsiIZA1zJGe2', NULL),
+(8, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:10', '$2y$10$dE9WWPqojlW1sdb9asQlouWABPlNBaysnHtvdSvtHJ3sr9Fl.48Ky', NULL),
+(9, 'Kian A. rodriguez1', '2025-04-08', 'Male', '09234567654', 'rheamelchor1@gmail.com', 'House of the Family', 'Bunga at Pagkilig sa Araw.png', 'grgr', 'hr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 0, '43', '3543', '35345', '2025-04-18 23:29:18', '$2y$10$ithgkMhmMFfLRNbfFzM0nOJ9bGfT326IVlDkMMiAgyg/FtWx6te1K', NULL),
+(10, 'Rhea M. Melchor', '2025-04-15', 'Female', '09234567654', 'rheamelchor2@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'ChatGPT Image Apr 7, 2025, 08_16_06 PM.png', 'grgr', 'grdgrr', 'Regular', '2025-04-16', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:12:26', '$2y$10$T6zN7.1Z.7PJ/g1NnC/gqOJ2MPlsLV98Uf8OZ0qNveIK0..vqe8zC', NULL),
+(11, 'Rhea M. Melchor', '2025-05-07', 'Female', '09234567654', 'rheamelchor3@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', '488600066_1207743820874183_7935915282642254921_n.jpg', 'Manager', 'Sales', 'Regular', '2025-04-21', 'dgrg', '353', '3535', '343', '3543', 'Married', 'Fixed', 20500.00, 1, 'Rhea M. Melchor', '3543', '09234567654', '2025-04-20 00:59:37', '$2y$10$eY7MopnTiZy7FsppJWu3QeEm7LiE3o9TEjho8nfPyqGTu1Wzx64Y.', NULL),
+(13, 'Joruel Calingasan', '2002-01-04', 'Male', '9171234567', 'joruel@gmail.com', '1234 Mango St., Makati City, Philippines', NULL, 'Director', 'Marketing', 'Regular', '2025-01-05', 'dgrg', '353', '3535', '343', '4354', 'Single', 'Fixed', 20500.00, 1, 'Winlyn', 'Wife', '2134324', '2025-04-23 14:10:23', '$2y$10$qpAGKMs35Ow58iEktbs8Nuxfpo107.YLH7DX6nwEJ4J7b8WceLLpy', NULL),
+(14, 'Rhea M. Melchor', '2025-04-23', 'Female', '09234567654', 'rheamelchor5@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'uploads/680c7899b75f4.jpg', 'Staff', 'Marketing', 'Regular', '2025-04-15', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 25000.00, 0, '0', '3543', '09234567654', '2025-04-26 06:09:29', '$2y$10$gD/sAKwt.hpPzG8s4p2Le.Vm.GQmDUYNtyOx/GLuce6ZF2EnQXFq.', 1),
+(15, 'Rhea M. Melchor', '2025-04-23', 'Female', '09234567654', 'rheamelchor5@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'uploads/680c78a048720.jpg', 'Staff', 'Marketing', 'Regular', '2025-04-15', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 25000.00, 0, '0', '3543', '09234567654', '2025-04-26 06:09:36', '$2y$10$Bm8HCRcgcL686vh/Knfk6Oy/mllmdIVSrr2UW7FqwsytLr1kC0Rza', 1),
+(16, 'Rhea M. Melchor', '2025-04-23', 'Female', '09234567654', 'rheamelchor5@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', 'uploads/680c79cb97934.jpg', 'Staff', 'Marketing', 'Regular', '2025-04-15', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 25000.00, 0, '0', '3543', '09234567654', '2025-04-26 06:14:35', '$2y$10$M6cyF2xs6f0ebqWyhfibx.HoOd.48MoL1yDPu8BIQcYli3MhTS3GK', 1),
+(17, 'Rhea M. Melchor', '2025-04-23', 'Female', '09234567654', 'rheamelchor5@gmail.com', 'Sagana, Bongabong, Oriental Mindoro', '490263398_1290810089141740_4646820909486734831_n.jpg', 'Staff', 'Marketing', 'Regular', '2025-04-15', 'dgrg', '353', '3535', '343', '3543', 'Single', 'Fixed', 25000.00, 0, 'Kian A. rodriguez1', '3543', '09234567654', '2025-04-26 06:26:14', '$2y$10$Qeh21qWumV62GYymDPPFW.WmLwMB5Fl/b2YiH/8DUNj1byxR0JW32', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employee_insurance`
+--
+
+CREATE TABLE `employee_insurance` (
+  `id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `plan_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date DEFAULT NULL,
+  `end_reason` text DEFAULT NULL,
+  `dependents` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -352,6 +378,48 @@ INSERT INTO `feedback` (`id`, `name`, `email`, `message`, `created_at`) VALUES
 (2, '43', 'rheamelchor@gmail.com', 'dfdd', '2025-04-16 14:53:04'),
 (3, '43', 'rheamelchor@gmail.com', 'dfdd', '2025-04-16 14:54:41'),
 (4, 'gege', 'rheamelchor@gmail.com', 'gerge', '2025-04-16 14:55:06');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `insurance`
+--
+
+CREATE TABLE `insurance` (
+  `id` int(11) NOT NULL,
+  `plan_name` varchar(100) NOT NULL,
+  `monthly_cost` decimal(10,2) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `insurance`
+--
+
+INSERT INTO `insurance` (`id`, `plan_name`, `monthly_cost`, `created_at`, `updated_at`) VALUES
+(1, 'insurance', 20.00, '2025-04-26 05:48:29', '2025-04-26 05:48:29');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `insurance_plans`
+--
+
+CREATE TABLE `insurance_plans` (
+  `id` int(11) NOT NULL,
+  `plan_name` varchar(100) NOT NULL,
+  `provider` varchar(100) NOT NULL,
+  `type` enum('Health','Life','Dental','Vision','Disability','Other') NOT NULL,
+  `description` text DEFAULT NULL,
+  `coverage_amount` decimal(15,2) NOT NULL,
+  `premium` decimal(15,2) NOT NULL,
+  `company_contribution` decimal(15,2) NOT NULL,
+  `employee_contribution` decimal(15,2) NOT NULL,
+  `effective_date` date NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -507,7 +575,16 @@ ALTER TABLE `departments`
 --
 ALTER TABLE `employees`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_department` (`department`);
+  ADD KEY `idx_department` (`department`),
+  ADD KEY `insurance_id` (`insurance_id`);
+
+--
+-- Indexes for table `employee_insurance`
+--
+ALTER TABLE `employee_insurance`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `employee_id` (`employee_id`),
+  ADD KEY `plan_id` (`plan_id`);
 
 --
 -- Indexes for table `employee_preferences`
@@ -528,6 +605,18 @@ ALTER TABLE `expenses`
 -- Indexes for table `feedback`
 --
 ALTER TABLE `feedback`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `insurance`
+--
+ALTER TABLE `insurance`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `insurance_plans`
+--
+ALTER TABLE `insurance_plans`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -566,7 +655,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `admin_permissions`
 --
 ALTER TABLE `admin_permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `admin_preferences`
@@ -584,7 +673,7 @@ ALTER TABLE `announcements`
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `bonuses`
@@ -614,7 +703,13 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `employees`
 --
 ALTER TABLE `employees`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
+-- AUTO_INCREMENT for table `employee_insurance`
+--
+ALTER TABLE `employee_insurance`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `employee_preferences`
@@ -633,6 +728,18 @@ ALTER TABLE `expenses`
 --
 ALTER TABLE `feedback`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `insurance`
+--
+ALTER TABLE `insurance`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `insurance_plans`
+--
+ALTER TABLE `insurance_plans`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `job_positions`
@@ -685,6 +792,19 @@ ALTER TABLE `deductions`
 --
 ALTER TABLE `departments`
   ADD CONSTRAINT `departments_ibfk_1` FOREIGN KEY (`manager_id`) REFERENCES `employees` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `employees`
+--
+ALTER TABLE `employees`
+  ADD CONSTRAINT `employees_ibfk_1` FOREIGN KEY (`insurance_id`) REFERENCES `insurance` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `employee_insurance`
+--
+ALTER TABLE `employee_insurance`
+  ADD CONSTRAINT `employee_insurance_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `employee_insurance_ibfk_2` FOREIGN KEY (`plan_id`) REFERENCES `insurance_plans` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `employee_preferences`
