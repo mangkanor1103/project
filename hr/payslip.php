@@ -1,5 +1,5 @@
-<!-- filepath: c:\xampp\htdocs\project\hr\payslip.php -->
 <?php
+// filepath: c:\xampp\htdocs\project\hr\payslip.php
 session_start();
 include '../config.php'; // Include database configuration
 
@@ -60,6 +60,13 @@ include '../components/header.php';
 
         <div class="flex justify-end mb-6">
             <button onclick="printAllPayslips()" class="bg-green-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-700 transition flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print All Payslips
+            </button>
+        </div>
+        
         <!-- Payslip Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <?php while ($employee = $result->fetch_assoc()): ?>
@@ -141,14 +148,10 @@ include '../components/header.php';
                 // Proper formula: Monthly Salary ÷ Number of Working Days = Daily Rate
                 $daily_rate = $basic_salary / $days_per_month;
 
-                // And it should work in reverse as well:
-                // Daily Rate × Number of Working Days = Monthly Salary
-                // $basic_salary = $daily_rate * $days_per_month;
-
                 // Calculate hourly rate (8 working hours per day)
                 $hourly_rate = $daily_rate / 8;
 
-                // Calculate overtime and premium rates - add these before they're used
+                // Calculate overtime and premium rates
                 $overtime_rate = $hourly_rate * 1.25; // Overtime rate (25% premium)
                 $night_diff_rate = $hourly_rate * 0.1; // Night differential (10% premium)
                 $night_overtime_rate = $overtime_rate * 0.1; // Night differential on overtime (10% premium)
@@ -286,23 +289,39 @@ include '../components/header.php';
                         </div>
                     </div>
                     
+                    <!-- Improved rate information section for the payslip cards -->
                     <div class="px-6 py-4 bg-blue-50 border-t border-b border-blue-100">
+                        <h4 class="text-sm font-semibold text-gray-600 mb-2">RATE INFORMATION</h4>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <span class="text-sm text-gray-500">Monthly Salary</span>
                                 <p class="font-semibold">₱<?php echo number_format($basic_salary, 2); ?></p>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-500">Daily Rate (<?php echo $days_per_month; ?> days)</span>
+                            <div class="relative">
+                                <span class="text-sm text-gray-500">Daily Rate</span>
                                 <p class="font-semibold">₱<?php echo number_format($daily_rate, 2); ?></p>
+                                <div class="absolute -top-3 -right-3 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full shadow-sm">
+                                    Monthly ÷ <?php echo $days_per_month; ?>
+                                </div>
                             </div>
                             <div>
-                                <span class="text-sm text-gray-500">Hourly Rate (8 hrs/day)</span>
+                                <span class="text-sm text-gray-500">Hourly Rate (8 hrs)</span>
                                 <p class="font-semibold">₱<?php echo number_format($hourly_rate, 2); ?></p>
                             </div>
                             <div>
                                 <span class="text-sm text-gray-500">OT Rate (×1.25)</span>
                                 <p class="font-semibold">₱<?php echo number_format($overtime_rate, 2); ?></p>
+                            </div>
+                        </div>
+                        <!-- Daily rate formula explainer -->
+                        <div class="mt-2 text-xs bg-white px-2 py-1.5 rounded border border-blue-200">
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="text-blue-700">
+                                    Formula: ₱<?php echo number_format($basic_salary, 2); ?> ÷ <?php echo $days_per_month; ?> days = ₱<?php echo number_format($daily_rate, 2); ?>/day
+                                </span>
                             </div>
                         </div>
                     </div>

@@ -75,21 +75,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($attendance) {
             $error_message = "You have already logged your time-in for today.";
         } else {
-            // Check if it's too late for a regular time-in (after 10 AM)
+            // Calculate late minutes if checked in after 8:00 AM
             $current_timestamp = strtotime($time_now);
-            if ($current_timestamp > $morning_cutoff) {
-                // Allow late check-in but flag it for HR review
-                $is_late = 1;
-                $insert_sql = "INSERT INTO attendance (employee_id, date, time_in, is_holiday, is_special_event, is_late) 
-                              VALUES (?, ?, ?, ?, ?, ?)";
+            $expected_start = strtotime($morning_start_time);
+            $late_minutes = 0;
+            
+            if ($current_timestamp > $expected_start) {
+                // Calculate minutes late (8:00 AM to current time)
+                $late_seconds = $current_timestamp - $expected_start;
+                $late_minutes = round($late_seconds / 60);
+                
+                // If more than 10 minutes late, flag for HR review
+                $is_late = ($late_minutes > 10) ? 1 : 0;
+                
+                // Insert with late minutes
+                $insert_sql = "INSERT INTO attendance (employee_id, date, time_in, is_holiday, is_special_event, is_late, late_minutes) 
+                              VALUES (?, ?, ?, ?, ?, ?, ?)";
                 $insert_stmt = $conn->prepare($insert_sql);
-                $insert_stmt->bind_param("issiib", $user_id, $date, $time_now, $is_holiday, $is_special_event, $is_late);
+                $insert_stmt->bind_param("issiiis", $user_id, $date, $time_now, $is_holiday, $is_special_event, $is_late, $late_minutes);
                 $insert_stmt->execute();
-                $success_message = "Late time-in recorded at $time_now. Please note this will be flagged for HR review.";
+                
+                // Format message with late time
+                $late_hours = floor($late_minutes / 60);
+                $remaining_minutes = $late_minutes % 60;
+                
+                if ($late_hours > 0) {
+                    $late_text = "$late_hours hr" . ($late_hours > 1 ? "s" : "") . " $remaining_minutes min" . ($remaining_minutes != 1 ? "s" : "");
+                } else {
+                    $late_text = "$late_minutes min" . ($late_minutes != 1 ? "s" : "");
+                }
+                
+                $success_message = "Time-in recorded at $time_now. You are $late_text late. This will be deducted from your pay.";
             } else {
-                // Normal time-in before cutoff
-                $insert_sql = "INSERT INTO attendance (employee_id, date, time_in, is_holiday, is_special_event) 
-                              VALUES (?, ?, ?, ?, ?)";
+                // Normal time-in before or at 8:00 AM
+                $insert_sql = "INSERT INTO attendance (employee_id, date, time_in, is_holiday, is_special_event, late_minutes) 
+                              VALUES (?, ?, ?, ?, ?, 0)";
                 $insert_stmt = $conn->prepare($insert_sql);
                 $insert_stmt->bind_param("issii", $user_id, $date, $time_now, $is_holiday, $is_special_event);
                 $insert_stmt->execute();
@@ -147,13 +167,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $lunch_duration_seconds = $lunch_in - $lunch_out;
                 $lunch_duration_hours = $lunch_duration_seconds / 3600; // Convert to hours
 
-                // Update attendance with lunch_in
-                $update_sql = "UPDATE attendance SET lunch_in = ?, lunch_duration = ? WHERE employee_id = ? AND date = ?";
-                $update_stmt = $conn->prepare($update_sql);
-                $update_stmt->bind_param("sdis", $time_now, $lunch_duration_hours, $user_id, $date);
-                $update_stmt->execute();
+                // Check if returning late after lunch (expected 1hr lunch break)
+                $expected_return = $lunch_out + 3600; // 1 hour after lunch_out
+                $afternoon_late_minutes = 0;
                 
-                $success_message = "Afternoon shift started at $time_now!";
+                if ($lunch_in > $expected_return) {
+                    // Calculate additional minutes beyond 1-hour lunch
+                    $late_seconds = $lunch_in - $expected_return;
+                    $afternoon_late_minutes = round($late_seconds / 60);
+                    
+                    // Update current late minutes (add to morning late if any)
+                    $current_late_minutes = $attendance['late_minutes'] ?? 0;
+                    $total_late_minutes = $current_late_minutes + $afternoon_late_minutes;
+                    
+                    // Format message with late time
+                    $late_hours = floor($afternoon_late_minutes / 60);
+                    $remaining_minutes = $afternoon_late_minutes % 60;
+                    
+                    if ($late_hours > 0) {
+                        $late_text = "$late_hours hr" . ($late_hours > 1 ? "s" : "") . " $remaining_minutes min" . ($remaining_minutes != 1 ? "s" : "");
+                    } else {
+                        $late_text = "$afternoon_late_minutes min" . ($afternoon_late_minutes != 1 ? "s" : "");
+                    }
+                    
+                    // Update attendance with lunch_in and late minutes
+                    $update_sql = "UPDATE attendance SET lunch_in = ?, lunch_duration = ?, late_minutes = ? WHERE employee_id = ? AND date = ?";
+                    $update_stmt = $conn->prepare($update_sql);
+                    $update_stmt->bind_param("sdis", $time_now, $lunch_duration_hours, $total_late_minutes, $user_id, $date);
+                    $update_stmt->execute();
+                    
+                    $success_message = "Afternoon shift started at $time_now. You are $late_text late returning from lunch. This will be deducted from your pay.";
+                } else {
+                    // Normal return from lunch break (within 1 hour)
+                    $update_sql = "UPDATE attendance SET lunch_in = ?, lunch_duration = ? WHERE employee_id = ? AND date = ?";
+                    $update_stmt = $conn->prepare($update_sql);
+                    $update_stmt->bind_param("sdis", $time_now, $lunch_duration_hours, $user_id, $date);
+                    $update_stmt->execute();
+                    
+                    $success_message = "Afternoon shift started at $time_now!";
+                }
             } else {
                 $error_message = "Lunch in time cannot be earlier than lunch out time.";
             }
@@ -466,7 +518,7 @@ $recent_attendance = $recent_stmt->get_result();
                                     </span>
                                 </div>
                                 
-                                <?php if ($today_attendance['lunch_out']): ?>
+                                <?php if (isset($today_attendance['lunch_out']) && $today_attendance['lunch_out']): ?>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="text-sm text-gray-500">Lunch Break Start:</span>
                                         <span class="block text-lg font-semibold text-gray-800">
@@ -475,7 +527,7 @@ $recent_attendance = $recent_stmt->get_result();
                                     </div>
                                 <?php endif; ?>
                                 
-                                <?php if ($today_attendance['lunch_in']): ?>
+                                <?php if (isset($today_attendance['lunch_in']) && $today_attendance['lunch_in']): ?>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="text-sm text-gray-500">Afternoon Time In:</span>
                                         <span class="block text-lg font-semibold text-gray-800">
@@ -484,7 +536,7 @@ $recent_attendance = $recent_stmt->get_result();
                                     </div>
                                 <?php endif; ?>
                                 
-                                <?php if ($today_attendance['time_out']): ?>
+                                <?php if (isset($today_attendance['time_out']) && $today_attendance['time_out']): ?>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="text-sm text-gray-500">Time Out:</span>
                                         <span class="block text-lg font-semibold text-gray-800">
@@ -550,8 +602,8 @@ $recent_attendance = $recent_stmt->get_result();
                             <form action="attendance.php" method="POST">
                                 <button type="submit" name="lunch_out" 
                                         class="w-full flex items-center justify-center py-4 px-2 rounded-xl transition-all duration-300 
-                                        <?php echo (!$today_attendance || $today_attendance['lunch_out']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg hover:shadow-yellow-200'; ?>"
-                                        <?php echo (!$today_attendance || $today_attendance['lunch_out']) ? 'disabled' : ''; ?>>
+                                        <?php echo (!$today_attendance || isset($today_attendance['lunch_out']) && $today_attendance['lunch_out']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg hover:shadow-yellow-200'; ?>"
+                                        <?php echo (!$today_attendance || isset($today_attendance['lunch_out']) && $today_attendance['lunch_out']) ? 'disabled' : ''; ?>>
                                     <div class="text-center">
                                         <span class="font-bold block text-sm">Lunch Out</span>
                                         <span class="text-xs">12:00 PM</span>
@@ -563,8 +615,8 @@ $recent_attendance = $recent_stmt->get_result();
                             <form action="attendance.php" method="POST">
                                 <button type="submit" name="lunch_in" 
                                         class="w-full flex items-center justify-center py-4 px-2 rounded-xl transition-all duration-300 
-                                        <?php echo (!$today_attendance || !$today_attendance['lunch_out'] || $today_attendance['lunch_in']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-blue-200'; ?>"
-                                        <?php echo (!$today_attendance || !$today_attendance['lunch_out'] || $today_attendance['lunch_in']) ? 'disabled' : ''; ?>>
+                                        <?php echo (!$today_attendance || !isset($today_attendance['lunch_out']) || empty($today_attendance['lunch_out']) || isset($today_attendance['lunch_in']) && $today_attendance['lunch_in']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-blue-200'; ?>"
+                                        <?php echo (!$today_attendance || !isset($today_attendance['lunch_out']) || empty($today_attendance['lunch_out']) || isset($today_attendance['lunch_in']) && $today_attendance['lunch_in']) ? 'disabled' : ''; ?>>
                                     <div class="text-center">
                                         <span class="font-bold block text-sm">Afternoon In</span>
                                         <span class="text-xs">1:00 PM</span>
@@ -576,8 +628,8 @@ $recent_attendance = $recent_stmt->get_result();
                             <form action="attendance.php" method="POST">
                                 <button type="submit" name="time_out" 
                                         class="w-full flex items-center justify-center py-4 px-2 rounded-xl transition-all duration-300 
-                                        <?php echo (!$today_attendance || !$today_attendance['lunch_in'] || $today_attendance['time_out']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-red-200'; ?>"
-                                        <?php echo (!$today_attendance || !$today_attendance['lunch_in'] || $today_attendance['time_out']) ? 'disabled' : ''; ?>>
+                                        <?php echo (!$today_attendance || !isset($today_attendance['lunch_in']) || empty($today_attendance['lunch_in']) || isset($today_attendance['time_out']) && $today_attendance['time_out']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-red-200'; ?>"
+                                        <?php echo (!$today_attendance || !isset($today_attendance['lunch_in']) || empty($today_attendance['lunch_in']) || isset($today_attendance['time_out']) && $today_attendance['time_out']) ? 'disabled' : ''; ?>>
                                     <div class="text-center">
                                         <span class="font-bold block text-sm">Time Out</span>
                                         <span class="text-xs">4:00 PM</span>
@@ -589,8 +641,8 @@ $recent_attendance = $recent_stmt->get_result();
                             <form action="attendance.php" method="POST">
                                 <button type="submit" name="overtime_in" 
                                         class="w-full flex items-center justify-center py-4 px-2 rounded-xl transition-all duration-300 
-                                        <?php echo (!$today_attendance || !$today_attendance['time_out'] || (isset($today_attendance['overtime_in']) && $today_attendance['overtime_in'])) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-purple-500 hover:bg-purple-600 text-white shadow-lg hover:shadow-purple-200'; ?>"
-                                        <?php echo (!$today_attendance || !$today_attendance['time_out'] || (isset($today_attendance['overtime_in']) && $today_attendance['overtime_in'])) ? 'disabled' : ''; ?>>
+                                        <?php echo (!$today_attendance || !isset($today_attendance['time_out']) || empty($today_attendance['time_out']) || isset($today_attendance['overtime_in']) && $today_attendance['overtime_in']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-purple-500 hover:bg-purple-600 text-white shadow-lg hover:shadow-purple-200'; ?>"
+                                        <?php echo (!$today_attendance || !isset($today_attendance['time_out']) || empty($today_attendance['time_out']) || isset($today_attendance['overtime_in']) && $today_attendance['overtime_in']) ? 'disabled' : ''; ?>>
                                     <div class="text-center">
                                         <span class="font-bold block text-sm">Overtime In</span>
                                         <span class="text-xs">After Regular Hours</span>
@@ -602,8 +654,8 @@ $recent_attendance = $recent_stmt->get_result();
                             <form action="attendance.php" method="POST">
                                 <button type="submit" name="overtime_out" 
                                         class="w-full flex items-center justify-center py-4 px-2 rounded-xl transition-all duration-300 
-                                        <?php echo (!$today_attendance || !isset($today_attendance['overtime_in']) || !$today_attendance['overtime_in'] || (isset($today_attendance['overtime_out']) && $today_attendance['overtime_out'])) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg hover:shadow-indigo-200'; ?>"
-                                        <?php echo (!$today_attendance || !isset($today_attendance['overtime_in']) || !$today_attendance['overtime_in'] || (isset($today_attendance['overtime_out']) && $today_attendance['overtime_out'])) ? 'disabled' : ''; ?>>
+                                        <?php echo (!$today_attendance || !isset($today_attendance['overtime_in']) || empty($today_attendance['overtime_in']) || isset($today_attendance['overtime_out']) && $today_attendance['overtime_out']) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg hover:shadow-indigo-200'; ?>"
+                                        <?php echo (!$today_attendance || !isset($today_attendance['overtime_in']) || empty($today_attendance['overtime_in']) || isset($today_attendance['overtime_out']) && $today_attendance['overtime_out']) ? 'disabled' : ''; ?>>
                                     <div class="text-center">
                                         <span class="font-bold block text-sm">Overtime Out</span>
                                         <span class="text-xs">End of Overtime</span>

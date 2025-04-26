@@ -1,5 +1,4 @@
 <?php
-// filepath: c:\xampp\htdocs\project\hr\get_all_payslips.php
 session_start();
 include '../config.php'; // Include database configuration
 
@@ -11,11 +10,14 @@ if (!isset($_SESSION['admin_loggedin']) || $_SESSION['admin_loggedin'] !== true)
 
 // Define the current pay period
 $current_period = date('F Y');
+$current_month = date('Y-m');
 
 // Fetch all employees
 $sql = "SELECT e.*, 
          COALESCE(ep.work_days_per_month, 22) AS work_days_per_month,
          COALESCE(ep.payment_frequency, 'Monthly') AS payment_frequency,
+         COALESCE(ep.pay_day_1, 30) AS pay_day_1,
+         COALESCE(ep.pay_day_2, 15) AS pay_day_2,
          ep.weekend_workday
          FROM employees e 
          LEFT JOIN employee_preferences ep ON e.id = ep.employee_id
@@ -26,9 +28,6 @@ if ($result->num_rows === 0) {
     echo "<h2>No employees found.</h2>";
     exit();
 }
-
-// Define the current month for attendance
-$current_month = date('Y-m');
 
 // CSS styles for the report
 echo '
@@ -118,10 +117,12 @@ foreach ($departments as $department => $employees) {
     echo '<th>ID</th>';
     echo '<th>Name</th>';
     echo '<th>Position</th>';
+    echo '<th>Monthly Rate (₱)</th>';
+    echo '<th>Daily Rate (₱)</th>';
     echo '<th>Work Days</th>';
     echo '<th>Days Present</th>';
     echo '<th>Days Absent</th>';
-    echo '<th>Late (min)</th>';
+    echo '<th>Late (hrs)</th>'; // Display late as hours
     echo '<th>Regular Pay (₱)</th>';
     echo '<th>Overtime (₱)</th>';
     echo '<th>Night Diff (₱)</th>';
@@ -153,7 +154,7 @@ foreach ($departments as $department => $employees) {
                 SUM(special_holiday_hours) AS total_special_holiday_hours,
                 SUM(legal_holiday_hours) AS total_legal_holiday_hours,
                 COUNT(DISTINCT date) AS days_present,
-                SUM(is_late) AS days_late,
+                COUNT(CASE WHEN late_minutes > 0 THEN 1 END) AS days_late,
                 SUM(late_minutes) AS total_late_minutes
             FROM attendance 
             WHERE employee_id = ? AND date LIKE ?";
@@ -176,7 +177,7 @@ foreach ($departments as $department => $employees) {
         $days_late = $attendance['days_late'] ?? 0;
         $total_late_minutes = $attendance['total_late_minutes'] ?? 0;
         
-        // Get work days and payment frequency from employee preferences
+        // Get work days and payment frequency
         $work_days_per_month = $employee['work_days_per_month'];
         $payment_frequency = $employee['payment_frequency'];
         $weekend_workday = $employee['weekend_workday'];
@@ -191,15 +192,12 @@ foreach ($departments as $department => $employees) {
         $days_absent = $total_working_days - $days_present;
         $days_absent = max(0, $days_absent); // Ensure no negative values
 
-        // Salary calculations based on employee preferences
+        // Correct calculation of daily rate from monthly salary
         $basic_salary = $employee['basic_salary']; // Monthly salary
+        $days_per_month = $work_days_per_month; // 22 or 26 days
         
-        // For semi-monthly payments, adjust the salary to half of monthly
-        $salary_multiplier = ($payment_frequency == 'Semi-Monthly') ? 0.5 : 1;
-        $period_salary = $basic_salary * $salary_multiplier;
-        
-        // Calculate daily rate based on preferred work days
-        $daily_rate = $basic_salary / $work_days_per_month;
+        // Proper formula: Monthly Salary ÷ Number of Working Days = Daily Rate
+        $daily_rate = $basic_salary / $days_per_month;
         
         // Calculate hourly rate (8 working hours per day)
         $hourly_rate = $daily_rate / 8;
@@ -208,31 +206,49 @@ foreach ($departments as $department => $employees) {
         $overtime_rate = $hourly_rate * 1.25; // Overtime rate (25% premium)
         $night_diff_rate = $hourly_rate * 0.1; // Night differential (10% premium)
         $night_overtime_rate = $overtime_rate * 0.1; // Night differential on overtime
-        $restday_premium_rate = $hourly_rate * 0.3; // Rest day premium (30% premium)
-        $special_holiday_rate = $hourly_rate * 0.3; // Special holiday premium (30% premium)
-        $legal_holiday_rate = $hourly_rate * 1.0; // Legal holiday premium (100% premium)
+        $restday_premium_rate = $hourly_rate * 0.3; // Rest day premium (30%)
+        $special_holiday_rate = $hourly_rate * 0.3; // Special holiday premium (30%)
+        $legal_holiday_rate = $hourly_rate * 1.0; // Legal holiday premium (100%)
+        
+        // Convert late minutes to hours for display and calculations
+        $late_hours = $total_late_minutes / 60;
+        $late_hours_display = number_format($late_hours, 2); // Format with 2 decimal places
+        
+        // Calculate late deduction based on hourly rate
+        $late_deduction = $late_hours * $hourly_rate;
+        
+        // Determine if this is first or second half of month (for Semi-Monthly payments)
+        $current_day = date('d');
+        $is_first_half = $current_day <= 15;
+        
+        // For semi-monthly payments, adjust the salary to half of monthly
+        $salary_multiplier = ($payment_frequency == 'Semi-Monthly') ? 0.5 : 1;
+        $period_salary = $basic_salary * $salary_multiplier;
         
         // Calculate absences deduction (days absent * daily rate)
         $absence_deduction = $days_absent * $daily_rate;
         
-        // Calculate late deduction (based on hourly rate)
-        $late_deduction = ($total_late_minutes / 60) * $hourly_rate;
-        
-        // Calculate regular pay (base salary minus absences and lates)
+        // Regular pay calculation - base salary minus absences and lates
         $regular_pay = $period_salary - $absence_deduction - $late_deduction;
         
         // Calculate premium pays
         $overtime_pay = $overtime_rate * $total_overtime_hours;
         $night_diff_pay = $night_diff_rate * $total_night_hours;
-        $night_ot_pay = ($overtime_rate + $night_overtime_rate) * $total_night_overtime_hours;
+        $night_ot_pay = $night_overtime_rate * $total_night_overtime_hours;
         
         // For 26-day employees, calculate weekend rates based on preference
-        if ($work_days_per_month == 26 && $weekend_workday) {
-            if ($weekend_workday == 'Saturday' || $weekend_workday == 'Sunday') {
-                // One weekend day is already in base pay for 26-day employees
+        if ($days_per_month == 26) {
+            if ($weekend_workday == 'Saturday') {
+                // Saturday is already in base pay for 26-day employees
                 $restday_pay = 0;
+            } else if ($weekend_workday == 'Sunday') {
+                // Sunday gets premium
+                $restday_pay = $restday_premium_rate * $total_restday_hours;
             } else if ($weekend_workday == 'Both') {
-                // Both weekend days are in base pay
+                // One day is in base, one gets premium - prorate based on actual rest day hours worked
+                $restday_pay = ($restday_premium_rate * $total_restday_hours) / 2;
+            } else {
+                // Default with no weekend day selected
                 $restday_pay = 0;
             }
         } else {
@@ -243,18 +259,20 @@ foreach ($departments as $department => $employees) {
         // Calculate holiday pays
         $special_holiday_pay = $special_holiday_rate * $total_special_holiday_hours;
         $legal_holiday_pay = $legal_holiday_rate * $total_legal_holiday_hours;
+        $holiday_pay = $hourly_rate * $total_holiday_hours;
         
         // Combine similar pay types for the table
         $total_night_pay = $night_diff_pay + $night_ot_pay;
-        $total_holiday_pay = $restday_pay + $special_holiday_pay + $legal_holiday_pay;
+        $total_holiday_pay = $holiday_pay + $restday_pay + $special_holiday_pay + $legal_holiday_pay;
 
         // Fetch expense reimbursements for the employee
         $expenses_sql = "
             SELECT SUM(amount) AS total_reimbursement
             FROM expenses 
             WHERE employee_id = ? 
-            AND (status = 'Approved' OR status = 'Reimbursed')
-            AND expense_date LIKE ?";
+            AND status = 'Approved' 
+            AND expense_date LIKE ?
+            AND reimbursed_date IS NULL";
         $expenses_stmt = $conn->prepare($expenses_sql);
         $expenses_stmt->bind_param("is", $employee['id'], $like_date);
         $expenses_stmt->execute();
@@ -263,39 +281,25 @@ foreach ($departments as $department => $employees) {
         // Get reimbursement amount
         $reimbursement_amount = $expenses['total_reimbursement'] ?? 0;
 
-        // Calculate gross salary
-        $gross_salary = $regular_pay + $overtime_pay + $night_diff_pay + $night_ot_pay +
-            $restday_pay + $special_holiday_pay + $legal_holiday_pay + $reimbursement_amount;
+        // Final gross salary calculation
+        $gross_salary = $regular_pay + $overtime_pay + $total_night_pay + $total_holiday_pay + $reimbursement_amount;
 
-        // Determine if this is first or second half of month (for Semi-Monthly payments)
-        $current_day = date('d');
-        $is_first_half = $current_day <= 15;
-        
         // Deductions - SSS, PhilHealth, and Pag-IBIG
-        // Use tiered contributions based on salary brackets
-        $monthly_equivalent = $basic_salary; // Full monthly salary for brackets
-        
-        // SSS contribution (tiered)
-        if ($monthly_equivalent <= 10000) {
-            $sss = 400 * $salary_multiplier;
-        } else if ($monthly_equivalent <= 20000) {
-            $sss = 800 * $salary_multiplier;
-        } else {
-            $sss = 1200 * $salary_multiplier;
-        }
-        
-        // PhilHealth (3% of monthly salary, split with employer)
-        $philhealth_rate = 0.03;
-        $philhealth = min(max($monthly_equivalent * $philhealth_rate / 2, 300), 1800) * $salary_multiplier;
-        
-        // Pag-IBIG (2% with cap)
-        $pagibig = min($monthly_equivalent * 0.02, 100) * $salary_multiplier;
-        
-        // Apply contributions only on first half for semi-monthly
-        if ($payment_frequency == 'Semi-Monthly' && !$is_first_half) {
-            $sss = 0;
-            $philhealth = 0;
-            $pagibig = 0;
+        // These values should ideally be calculated based on government tables
+        $sss = ($gross_salary > 20000) ? 900 : ($gross_salary > 10000 ? 525 : 300); // Example tiered SSS contribution
+        $philhealth = min(max($gross_salary * 0.03, 100), 1800) / 2; // PhilHealth is 3% of salary, split between employer/employee
+        $pagibig = min($gross_salary * 0.02, 100); // Pag-IBIG is 2% with ₱100 cap
+
+        // Adjust deductions for semi-monthly payments
+        if ($payment_frequency == 'Semi-Monthly') {
+            if ($is_first_half) {
+                // First half of the month gets all contributions
+            } else {
+                // Second half of the month - no contributions
+                $sss = 0;
+                $philhealth = 0;
+                $pagibig = 0;
+            }
         }
         
         $total_deductions = $sss + $philhealth + $pagibig;
@@ -313,10 +317,12 @@ foreach ($departments as $department => $employees) {
         echo '<td>' . str_pad($employee['id'], 4, '0', STR_PAD_LEFT) . '</td>';
         echo '<td>' . htmlspecialchars($employee['full_name']) . '</td>';
         echo '<td>' . htmlspecialchars($employee['job_position']) . '</td>';
+        echo '<td>' . number_format($basic_salary, 2) . '</td>';
+        echo '<td>' . number_format($daily_rate, 2) . '</td>';
         echo '<td>' . $work_days_per_month . ($payment_frequency == 'Semi-Monthly' ? '/2' : '') . '</td>';
         echo '<td>' . number_format($days_present, 1) . '</td>';
         echo '<td>' . number_format($days_absent, 1) . '</td>';
-        echo '<td>' . number_format($total_late_minutes, 0) . '</td>';
+        echo '<td>' . $late_hours_display . '</td>'; // Display late as hours
         echo '<td>' . number_format($regular_pay, 2) . '</td>';
         echo '<td>' . number_format($overtime_pay, 2) . '</td>';
         echo '<td>' . number_format($total_night_pay, 2) . '</td>';
@@ -329,11 +335,11 @@ foreach ($departments as $department => $employees) {
     
     // Department total row
     echo '<tr class="total">';
-    echo '<td colspan="7" style="text-align:right;"><strong>Department Total:</strong></td>';
+    echo '<td colspan="9" style="text-align:right;"><strong>Department Total:</strong></td>';
     echo '<td>' . number_format($dept_total_gross - $dept_total_deductions, 2) . '</td>';
-    echo '<td>' . number_format(0, 2) . '</td>'; // No overtime in total
-    echo '<td>' . number_format(0, 2) . '</td>'; // No night diff in total
-    echo '<td>' . number_format(0, 2) . '</td>'; // No holiday pay in total
+    echo '<td>' . number_format(0, 2) . '</td>';
+    echo '<td>' . number_format(0, 2) . '</td>';
+    echo '<td>' . number_format(0, 2) . '</td>';
     echo '<td>' . number_format($dept_total_gross, 2) . '</td>';
     echo '<td>' . number_format($dept_total_deductions, 2) . '</td>';
     echo '<td class="bg-green-100">' . number_format($dept_total_net, 2) . '</td>';
@@ -353,17 +359,55 @@ foreach ($departments as $department => $employees) {
 // Company-wide grand total section
 echo '<h2>Company Summary</h2>';
 echo '<table>';
+echo '<tr>';
+echo '<th style="text-align:left;">Description</th>';
+echo '<th>Gross Pay (₱)</th>';
+echo '<th>Total Deductions (₱)</th>';
+echo '<th>Net Pay (₱)</th>';
+echo '</tr>';
 echo '<tr class="total">';
-echo '<td style="text-align:left;"><strong>Grand Total:</strong></td>';
+echo '<td style="text-align:left;"><strong>Grand Total</strong></td>';
 echo '<td>' . number_format($grand_total_gross, 2) . '</td>';
 echo '<td>' . number_format($grand_total_deductions, 2) . '</td>';
 echo '<td class="bg-green-100">' . number_format($grand_total_net, 2) . '</td>';
 echo '</tr>';
 echo '</table>';
 
+// Add summary statistics
+echo '<div style="margin-top: 20px; display: flex; justify-content: space-between;">';
+echo '<div style="width: 32%; background-color: #f0f9ff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">';
+echo '<h3 style="font-size: 16px; color: #2563eb; margin: 0 0 10px 0;">Total Gross Pay</h3>';
+echo '<p style="font-size: 20px; font-weight: bold; margin: 0;">₱' . number_format($grand_total_gross, 2) . '</p>';
+echo '</div>';
+
+echo '<div style="width: 32%; background-color: #fff1f2; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">';
+echo '<h3 style="font-size: 16px; color: #dc2626; margin: 0 0 10px 0;">Total Deductions</h3>';
+echo '<p style="font-size: 20px; font-weight: bold; margin: 0;">₱' . number_format($grand_total_deductions, 2) . '</p>';
+echo '</div>';
+
+echo '<div style="width: 32%; background-color: #ecfdf5; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">';
+echo '<h3 style="font-size: 16px; color: #059669; margin: 0 0 10px 0;">Total Net Pay</h3>';
+echo '<p style="font-size: 20px; font-weight: bold; margin: 0;">₱' . number_format($grand_total_net, 2) . '</p>';
+echo '</div>';
+echo '</div>';
+
+// Add signature lines for approvals
+echo '<div style="margin-top: 50px; display: flex; justify-content: space-between;">';
+echo '<div style="width: 30%; text-align: center;">';
+echo '<div style="border-top: 1px solid #000; padding-top: 5px;">HR Manager</div>';
+echo '</div>';
+echo '<div style="width: 30%; text-align: center;">';
+echo '<div style="border-top: 1px solid #000; padding-top: 5px;">Finance Officer</div>';
+echo '</div>';
+echo '<div style="width: 30%; text-align: center;">';
+echo '<div style="border-top: 1px solid #000; padding-top: 5px;">Company President</div>';
+echo '</div>';
+echo '</div>';
+
 // Footer
 echo '<div class="footer">';
 echo '<p>Generated on ' . date('Y-m-d H:i:s') . '</p>';
-echo '<p>This is an official payroll document and is valid without signature.</p>';
+echo '<p>This is an official payroll document generated by the HR system.</p>';
+echo '<p>Company Name © ' . date('Y') . ' - All Rights Reserved</p>';
 echo '</div>';
 ?>

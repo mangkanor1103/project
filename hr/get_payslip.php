@@ -101,29 +101,38 @@ $today_attendance_stmt->bind_param("is", $employee_id, $today_date);
 $today_attendance_stmt->execute();
 $today_attendance = $today_attendance_stmt->get_result()->fetch_assoc();
 
+// First, calculate salary base values
+$basic_salary = $employee['basic_salary']; // Monthly salary from DB
+$basic_rate_per_day = $basic_salary / 22; // Daily rate
+$hourly_rate = $basic_rate_per_day / 8; // Hourly rate
+$overtime_rate = $hourly_rate * 1.25; // Overtime rate
+
+// Now calculate late deduction using the proper hourly rate
 $regular_start_time = strtotime('08:00:00'); // Regular start time
 $employee_time_in = strtotime($today_attendance['time_in'] ?? '08:00:00'); // Employee's actual time in
 
 // Calculate late time in hours
 $late_seconds = max(0, $employee_time_in - $regular_start_time);
-$late_hours = $late_seconds / 3600; // Convert seconds to hours
+$total_late_minutes = $late_seconds / 60; // Convert seconds to minutes
+$late_hours = $total_late_minutes / 60; // Convert minutes to hours
+
+// Format for display
+$late_hours_display = floor($late_hours);
+$late_minutes_display = round(($late_hours - $late_hours_display) * 60);
+
+// Calculate late deduction using hourly rate
+$late_deduction = $late_hours * $hourly_rate;
+
+// Make sure it's not negative
+if ($late_deduction < 0) {
+    $late_deduction = 0.00;
+}
 
 // Deduct late hours from total hours worked
 $total_hours_worked -= $late_hours;
 if ($total_hours_worked < 0) {
     $total_hours_worked = 0; // Ensure total hours worked is not negative
 }
-
-// Convert late time to hours, minutes, and seconds for display
-$late_hours_display = floor($late_hours);
-$late_minutes_display = floor(($late_hours - $late_hours_display) * 60);
-$late_seconds_display = round((($late_hours - $late_hours_display) * 60 - $late_minutes_display) * 60);
-
-// Salary calculations
-$basic_salary = $employee['basic_salary']; // Monthly salary from DB
-$basic_rate_per_day = $basic_salary / 22; // Daily rate
-$hourly_rate = $basic_rate_per_day / 8; // Hourly rate
-$overtime_rate = $hourly_rate * 1.25; // Overtime rate
 
 // Calculate pay components
 $regular_pay = $hourly_rate * $total_hours_worked;
@@ -234,7 +243,7 @@ $net_salary = $gross_salary - $total_deductions;
                     <?php echo "$total_hours hrs $total_minutes mins $total_seconds secs"; ?>
                 </p>
                 <p><span class="font-medium text-gray-600">Late Time:</span>
-                    <?php echo "$late_hours_display hrs $late_minutes_display mins $late_seconds_display secs"; ?>
+                    <?php echo "$late_hours_display hrs $late_minutes_display mins"; ?>
                 </p>
             </div>
         </div>
@@ -334,10 +343,12 @@ $net_salary = $gross_salary - $total_deductions;
             <div class="grid grid-cols-3 gap-4 py-2 border-b border-gray-200 border-dashed">
                 <div>Late Deduction</div>
                 <div>
-                    <?php echo "$late_hours_display hrs $late_minutes_display mins $late_seconds_display secs"; ?> ×
-                    ₱<?php echo number_format($hourly_rate, 2); ?>
+                    <?php 
+                    // Always display as hours with hourly rate, even for small amounts
+                    echo number_format($late_hours, 2) . " hours × ₱" . number_format($hourly_rate, 2) . "/hour";
+                    ?>
                 </div>
-                <div class="text-right text-red-600">-₱<?php echo number_format($hourly_rate * $late_hours, 2); ?></div>
+                <div class="text-right text-red-600">-₱<?php echo number_format($late_deduction, 2); ?></div>
             </div>
 
             <!-- Expense Details Section - Add after the Late Deduction section -->
